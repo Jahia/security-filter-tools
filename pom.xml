@@ -53,18 +53,24 @@
         <version>8.0.0.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>security-filter-parent</artifactId>
+    <artifactId>security-filter-tools</artifactId>
     <version>2.0.0-SNAPSHOT</version>
-    <packaging>pom</packaging>
-    <name>Jahia API security config and filter parent</name>
-    <description>Jahia API security config and filter parent</description>
+    <packaging>bundle</packaging>
+    <name>Jahia API security config and filter tools</name>
+    <description>Jahia API security config and filter tools</description>
 
     <scm>
-        <connection>scm:git:git@github.com:Jahia/security-filter.git</connection>
-        <developerConnection>scm:git:git@github.com:Jahia/security-filter.git</developerConnection>
-        <url>scm:git:git@github.com:Jahia/security-filter.git</url>
+        <connection>scm:git:git@github.com:Jahia/security-filter-tools.git</connection>
+        <developerConnection>scm:git:git@github.com:Jahia/security-filter-tools.git</developerConnection>
+        <url>scm:git:git@github.com:Jahia/security-filter-tools.git</url>
         <tag>HEAD</tag>
     </scm>
+
+    <properties>
+        <jahia-module-type>system</jahia-module-type>
+        <jahia-depends>default,graphql-dxm-provider,security-filter</jahia-depends>
+        <jahia-module-signature>MCwCFDbKSmIgHsb33AdJBJTQcVm9JrYoAhQWoCrU+txQqbOYUJYkHLsmi/II5A==</jahia-module-signature>
+    </properties>
 
     <repositories>
         <repository>
@@ -81,8 +87,72 @@
         </repository>
     </repositories>
 
-    <modules>
-        <module>core</module>
-        <module>tools</module>
-    </modules>
+    <dependencies>
+        <dependency>
+            <groupId>org.jahia.modules</groupId>
+            <artifactId>security-filter</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jahia.modules</groupId>
+            <artifactId>graphql-dxm-provider</artifactId>
+            <version>2.0.0-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.github.graphql-java</groupId>
+            <artifactId>graphql-java-annotations</artifactId>
+            <version>6.0.0-jahia1</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <_dsannotations>*</_dsannotations>
+                        <Import-Package>${jahia.plugin.projectPackageImport}, *</Import-Package>
+                    </instructions>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <version>1.6</version>
+                <executions>
+                    <execution>
+                        <id>npm install node and npm</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>install-node-and-yarn</goal>
+                        </goals>
+                        <configuration>
+                            <nodeVersion>v8.11.3</nodeVersion>
+                            <yarnVersion>v1.9.2</yarnVersion>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>yarn install</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>yarn</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>webpack</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>webpack</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>
