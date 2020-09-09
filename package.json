@@ -2,20 +2,30 @@
   "name": "@jahia/security-filter",
   "version": "2.0.0",
   "scripts": {
-    "dev": "./node_modules/.bin/webpack --watch --inline",
-    "build": "./node_modules/.bin/webpack --config=webpack.build.config.js"
+    "dev": "yarn webpack --watch",
+    "build": "yarn webpack"
   },
   "description": "Security Filter for DX",
   "main": "index.js",
   "repository": "git@github.com:Jahia/security-filter-tools.git",
   "author": "Jahia Core Tean <core@jahia.com>",
   "license": "MIT",
+  "jahia": {
+    "apps": {
+      "jahia": [
+        "javascript/apps/jahia.bundle.js"
+      ]
+    }
+  },
   "dependencies": {
-    "@jahia/apollo-dx": "^1.0.0-beta.20180605080716",
-    "@jahia/i18next": "^1.0.0-beta.20180628145923",
-    "@jahia/react-apollo": "^1.0.0-beta.20180605080720",
-    "@jahia/react-material": "^1.0.0-beta.20180710133148",
-    "@jahia/redux": "^1.0.0-beta.20180628145924",
+    "@jahia/apollo-dx": "^1.1.0",
+    "@jahia/design-system-kit": "^1.1.8",
+    "@jahia/i18next": "^1.1.0",
+    "@jahia/moonstone": "^0.16.1",
+    "@jahia/react-apollo": "^1.1.0",
+    "@jahia/react-material": "^3.0.0",
+    "@jahia/redux": "^1.1.0",
+    "@jahia/ui-extender": "^0.4.20",
     "@material-ui/core": "^1.2.0",
     "@material-ui/icons": "^1.1.0",
     "@material-ui/lab": "^1.0.0-alpha.8",
