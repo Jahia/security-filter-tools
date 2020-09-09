@@ -1,1 +1,1 @@
-import JWTApp from './jwt/main';
+import './jwt/App.register';

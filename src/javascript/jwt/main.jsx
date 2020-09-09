@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import App from "./app";
+import App from "./App";
 import {CssBaseline} from "@material-ui/core";
 
 window.reactRenderJWTApp = function(target, id, dxContext) {
