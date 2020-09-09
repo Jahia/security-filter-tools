@@ -1,12 +1,9 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { withStyles } from '@material-ui/core/styles';
-import {ApolloProvider} from "react-apollo";
-import {client} from "@jahia/apollo-dx";
+import {withStyles} from '@material-ui/core/styles';
 import AppBar from '@material-ui/core/AppBar';
 import Toolbar from '@material-ui/core/Toolbar';
 import Typography from '@material-ui/core/Typography';
-import DxContext from '../DxContext';
 import TokenManager from './tokenManager';
 
 const styles = {
@@ -16,7 +13,7 @@ const styles = {
 };
 
 function App(props) {
-    const { classes, dxContext } = props;
+    const {classes, dxContext} = props;
     return (
         <div className={classes.root}>
             <AppBar position="static" color="default">
@@ -26,11 +23,7 @@ function App(props) {
                     </Typography>
                 </Toolbar>
             </AppBar>
-            <ApolloProvider client={client({contextPath: window.contextJsParameters.contextPath})}>
-                <DxContext.Provider value={dxContext}>
-                    <TokenManager dxContext={dxContext}/>
-                </DxContext.Provider>
-            </ApolloProvider>
+            <TokenManager dxContext={dxContext}/>
         </div>
     );
 }

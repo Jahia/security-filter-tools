@@ -2,8 +2,8 @@
   "name": "@jahia/security-filter",
   "version": "2.0.0",
   "scripts": {
-    "dev": "yarn webpack --watch",
-    "build": "yarn webpack"
+    "dev": "webpack --watch",
+    "build": "webpack"
   },
   "description": "Security Filter for DX",
   "main": "index.js",
@@ -24,7 +24,6 @@
     "@jahia/moonstone": "^0.16.1",
     "@jahia/react-apollo": "^1.1.0",
     "@jahia/react-material": "^3.0.0",
-    "@jahia/redux": "^1.1.0",
     "@jahia/ui-extender": "^0.4.20",
     "@material-ui/core": "^1.2.0",
     "@material-ui/icons": "^1.1.0",

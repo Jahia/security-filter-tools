@@ -201,13 +201,6 @@
     react-select "^2.4.2"
     recompose "^0.30.0"
 
-"@jahia/redux@^1.1.0":
-  version "1.1.0"
-  resolved "http://npm.int.jahia.com:4873/@jahia%2fredux/-/redux-1.1.0.tgz#02f76c4656c762bbb015aec74a7859d28c1dc539"
-  integrity sha512-j+fqoASk9asv0DQpRRNnQVqIUwB7tLWqXg4JKG3+Kiv3yxrJ+kmohFMigq3VHbZgICMwxlFoXGm1o0p+CGnS1w==
-  dependencies:
-    lodash "^4.17.13"
-
 "@jahia/ui-extender@^0.4.20":
   version "0.4.20"
   resolved "http://npm.int.jahia.com:4873/@jahia%2fui-extender/-/ui-extender-0.4.20.tgz#9537a04d8778757bcb48e94b3e3a07f62136fa23"
