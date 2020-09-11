@@ -5739,11 +5739,6 @@ webpack-cli@^3.3.0:
     v8-compile-cache "2.0.3"
     yargs "13.2.4"
 
-webpack-custom-chunk-id-plugin@^1.0.3:
-  version "1.0.3"
-  resolved "https://registry.yarnpkg.com/webpack-custom-chunk-id-plugin/-/webpack-custom-chunk-id-plugin-1.0.3.tgz#e93406aa083efb6dae3a12e015882df596bf4271"
-  integrity sha512-CV3UkOo1dCz06fkOG+zmNyuqLm9kWm6j5dReNiRGs48wAV+9DpeTAtyBMnBEckbNBTtvhSujI4yFcC0nRhzA1Q==
-
 webpack-node-externals@^1.7.2:
   version "1.7.2"
   resolved "https://registry.yarnpkg.com/webpack-node-externals/-/webpack-node-externals-1.7.2.tgz#6e1ee79ac67c070402ba700ef033a9b8d52ac4e3"
