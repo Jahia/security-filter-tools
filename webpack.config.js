@@ -1,5 +1,6 @@
 var path = require('path');
 const webpack = require('webpack');
+const customChunkIdPlugin = require('webpack-custom-chunk-id-plugin');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 var env = process.env.WEBPACK_ENV || 'development';
 
@@ -18,7 +19,7 @@ module.exports = (env, argv) => {
         },
         output: {
             path: path.resolve(__dirname, 'src/main/resources/javascript/apps/'),
-            filename: 'jahia.bundle.js'
+            filename: 'jahia-security-filter-tools.bundle.js'
         },
         resolve: {
             mainFields: ['module', 'main'],
@@ -53,6 +54,10 @@ module.exports = (env, argv) => {
                 hashFunction: 'sha256',
                 hashDigest: 'hex',
                 hashDigestLength: 20
+            }),
+
+            new customChunkIdPlugin({
+                prepend: "security-filter-tools."
             })
         ],
         mode: 'development'
