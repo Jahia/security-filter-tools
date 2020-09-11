@@ -18,7 +18,8 @@ module.exports = (env, argv) => {
         },
         output: {
             path: path.resolve(__dirname, 'src/main/resources/javascript/apps/'),
-            filename: 'jahia.bundle.js'
+            filename: 'jahia.bundle.js',
+            jsonpFunction: 'securityFilterToolsJsonp'
         },
         resolve: {
             mainFields: ['module', 'main'],
