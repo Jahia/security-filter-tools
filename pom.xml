@@ -50,7 +50,7 @@
     <parent>
         <groupId>org.jahia.modules</groupId>
         <artifactId>jahia-modules</artifactId>
-        <version>8.0.0.0</version>
+        <version>8.1.0.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>security-filter-tools</artifactId>
@@ -68,7 +68,7 @@
 
     <properties>
         <jahia-module-type>system</jahia-module-type>
-        <jahia-depends>default,graphql-dxm-provider,security-filter</jahia-depends>
+        <jahia-depends>default,graphql-dxm-provider</jahia-depends>
         <jahia-module-signature>MCwCFBIzkPf4w6xPRkaankWrVT9HLP5uAhRHqtYwy81Y+CV+ZcbbKLsffQFTXA==</jahia-module-signature>
         <import-package>graphql.annotations.annotationTypes;version="[6.1,9)"</import-package>
         <jahia.plugin.version>5.17-SNAPSHOT</jahia.plugin.version>
@@ -91,9 +91,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.jahia.modules</groupId>
-            <artifactId>security-filter</artifactId>
-            <version>2.0.0</version>
+            <groupId>org.jahia.bundles</groupId>
+            <artifactId>org.jahia.bundles.securityfilter</artifactId>
+            <version>8.1.0.0-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
