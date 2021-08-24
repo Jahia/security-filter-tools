@@ -68,7 +68,7 @@
 
     <properties>
         <jahia-module-type>system</jahia-module-type>
-        <jahia-depends>default,graphql-dxm-provider,security-filter</jahia-depends>
+        <jahia-depends>default,graphql-dxm-provider</jahia-depends>
         <jahia-module-signature>MCwCFBIzkPf4w6xPRkaankWrVT9HLP5uAhRHqtYwy81Y+CV+ZcbbKLsffQFTXA==</jahia-module-signature>
         <import-package>graphql.annotations.annotationTypes;version="[6.1,9)"</import-package>
         <jahia.plugin.version>5.17-SNAPSHOT</jahia.plugin.version>
