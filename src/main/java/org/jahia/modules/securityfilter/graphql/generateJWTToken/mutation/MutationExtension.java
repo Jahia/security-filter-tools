@@ -48,7 +48,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.annotations.annotationTypes.*;
 import org.jahia.modules.graphql.provider.dxm.DXGraphQLProvider;
-import org.jahia.modules.securityfilter.JWTService;
+import org.jahia.bundles.securityfilter.JWTService;
 import org.jahia.modules.securityfilter.graphql.generateJWTToken.GraphQLToken;
 import org.jahia.osgi.BundleUtils;
 import org.slf4j.Logger;
