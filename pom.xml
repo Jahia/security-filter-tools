@@ -70,8 +70,21 @@
         <jahia-module-type>system</jahia-module-type>
         <jahia-depends>default,graphql-dxm-provider</jahia-depends>
         <jahia-module-signature>MCwCFBIzkPf4w6xPRkaankWrVT9HLP5uAhRHqtYwy81Y+CV+ZcbbKLsffQFTXA==</jahia-module-signature>
-        <import-package>graphql.annotations.annotationTypes;version="[6.1,9)"</import-package>
-        <jahia.plugin.version>5.17-SNAPSHOT</jahia.plugin.version>
+        <import-package>
+            com.auth0.jwt.interfaces,
+            com.fasterxml.jackson.core;version="[2.10,3)",
+            com.fasterxml.jackson.databind;version="[2.10,3)",
+            javax.jcr;version="[2.0,3)",
+            graphql.annotations.annotationTypes;version="[7.2,9)",
+            org.jahia.bundles.securityfilter;version="[8.1,9)",
+            org.jahia.modules.graphql.provider.dxm;version="[2.7,3)",
+            org.jahia.osgi,
+            org.slf4j;version="[1.7,2)",
+            org.apache.naming.java,
+            org.jahia.defaults.config.spring,
+            org.jahia.exceptions,
+            org.jahia.services
+        </import-package>
     </properties>
 
     <repositories>
@@ -106,13 +119,13 @@
         <dependency>
             <groupId>org.jahia.modules</groupId>
             <artifactId>graphql-dxm-provider</artifactId>
-            <version>2.0.0</version>
+            <version>2.7.0-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>io.github.graphql-java</groupId>
             <artifactId>graphql-java-annotations</artifactId>
-            <version>6.0.0-jahia1</version>
+            <version>${graphql-java-annotations.version}</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
