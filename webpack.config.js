@@ -1,25 +1,18 @@
 var path = require('path');
-const webpack = require('webpack');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+const ModuleFederationPlugin = require("webpack/lib/container/ModuleFederationPlugin");
+const shared = require("./webpack.shared")
 var env = process.env.WEBPACK_ENV || 'development';
 
-// Get manifest
-var normalizedPath = require('path').join(__dirname, './target/dependency');
-var manifest = '';
-require('fs').readdirSync(normalizedPath).forEach(function (file) {
-    manifest = './target/dependency/' + file;
-    console.log('use manifest ' + manifest);
-});
 
 module.exports = (env, argv) => {
     const config = {
         entry: {
-            main: [path.resolve(__dirname, 'src/javascript/publicPath'), path.resolve(__dirname, 'src/javascript/index.js')]
+            main: [path.resolve(__dirname, 'src/javascript/index.js')]
         },
         output: {
             path: path.resolve(__dirname, 'src/main/resources/javascript/apps/'),
-            filename: 'jahia.bundle.js',
-            jsonpFunction: 'securityFilterToolsJsonp'
+            filename: 'jahia.bundle.js'
         },
         resolve: {
             mainFields: ['module', 'main'],
@@ -28,33 +21,76 @@ module.exports = (env, argv) => {
         module: {
             rules: [
                 {
-                    test: /\.mjs$/,
-                    include: /node_modules/,
-                    type: 'javascript/auto',
+                    test: /\.m?js$/,
+                    type: 'javascript/auto'
                 },
                 {
                     test: /\.jsx?$/,
-                    include: [path.join(__dirname, "src")],
-                    loader: 'babel-loader',
-
-                    query: {
-                        presets: [['env', {modules: false}], 'react', 'stage-2'],
-                        plugins: [
-                            'lodash'
-                        ]
+                    include: [path.join(__dirname, 'src')],
+                    use: {
+                        loader: 'babel-loader',
+                        options: {
+                            presets: [
+                                ['@babel/preset-env', {
+                                    modules: false,
+                                    targets: {chrome: '60', edge: '44', firefox: '54', safari: '12'}
+                                }],
+                                '@babel/preset-react'
+                            ],
+                            plugins: [
+                                'lodash'
+                            ]
+                        }
                     }
+                },
+                {
+                    test: /\.css$/,
+                    sideEffects: true,
+                    use: ['style-loader', 'css-loader']
+                },
+                {
+                    test: /\.scss$/i,
+                    sideEffects: true,
+                    use: [
+                        'style-loader',
+                        // Translates CSS into CommonJS
+                        {
+                            loader: 'css-loader',
+                            options: {
+                                modules: {
+                                    mode: 'local'
+                                }
+                            }
+                        },
+                        // Compiles Sass to CSS
+                        'sass-loader'
+                    ]
+                },
+                {
+                    test: /\.(woff(2)?|ttf|eot|svg)(\?v=\d+\.\d+\.\d+)?$/,
+                    use: [{
+                        loader: 'file-loader',
+                        options: {
+                            name: '[name].[ext]',
+                            outputPath: 'fonts/'
+                        }
+                    }]
                 }
             ]
         },
         plugins: [
-            new webpack.DllReferencePlugin({
-                manifest: require(manifest)
+            new ModuleFederationPlugin({
+                name: "securityfiltertools",
+                library: { type: "assign", name: "appShell.remotes.securityfiltertools" },
+                filename: "remoteEntry.js",
+                exposes: {
+                    './init': './src/javascript/init'
+                },
+                remotes: {
+                    '@jahia/app-shell': 'appShellRemote',
+                },
+                shared
             }),
-            new webpack.HashedModuleIdsPlugin({
-                hashFunction: 'sha256',
-                hashDigest: 'hex',
-                hashDigestLength: 20
-            })
         ],
         mode: 'development'
     };
