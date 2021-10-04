@@ -1,9 +1,9 @@
 var path = require('path');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+const CleanWebpackPlugin = require('clean-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 const ModuleFederationPlugin = require("webpack/lib/container/ModuleFederationPlugin");
 const shared = require("./webpack.shared")
-var env = process.env.WEBPACK_ENV || 'development';
-
 
 module.exports = (env, argv) => {
     const config = {
@@ -12,11 +12,13 @@ module.exports = (env, argv) => {
         },
         output: {
             path: path.resolve(__dirname, 'src/main/resources/javascript/apps/'),
-            filename: 'jahia.bundle.js'
+            filename: 'securityfiltertools.bundle.js',
+            chunkFilename: '[name].securityfiltertools.[chunkhash:6].js'
         },
         resolve: {
             mainFields: ['module', 'main'],
-            extensions: ['.mjs', '.js', '.jsx', 'json']
+            extensions: ['.mjs', '.js', '.jsx', '.json', '.scss'],
+            fallback: { "url": false }
         },
         module: {
             rules: [
@@ -89,11 +91,14 @@ module.exports = (env, argv) => {
                 remotes: {
                     '@jahia/app-shell': 'appShellRemote',
                 },
-                shared
+                shared,
             }),
+            new CleanWebpackPlugin(path.resolve(__dirname, 'src/main/resources/javascript/apps/'), {verbose: false}),
+            new CopyWebpackPlugin({patterns: [{from: './package.json', to: ''}]}),
         ],
         mode: 'development'
     };
+
     config.devtool = (argv.mode === 'production') ? 'source-map' : 'eval-source-map';
 
     if (argv.analyze) {
