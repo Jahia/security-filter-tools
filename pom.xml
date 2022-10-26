@@ -69,8 +69,8 @@
     <properties>
         <jahia-module-type>system</jahia-module-type>
         <jahia-depends>default,graphql-dxm-provider</jahia-depends>
-        <jahia-module-signature>MCwCFBIzkPf4w6xPRkaankWrVT9HLP5uAhRHqtYwy81Y+CV+ZcbbKLsffQFTXA==</jahia-module-signature>
-        <import-package>
+        <jahia-module-signature>MCwCFHmX1H8Md6LabBQ5HvyNnMx/slNGAhQqeIYqancTMMXoxixlW0y4yOtthw==</jahia-module-signature>
+	<import-package>
             com.auth0.jwt.interfaces,
             com.fasterxml.jackson.core;version="[2.10,3)",
             com.fasterxml.jackson.databind;version="[2.10,3)",
