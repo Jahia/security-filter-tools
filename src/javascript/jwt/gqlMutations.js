@@ -1,4 +1,4 @@
-import gql from "graphql-tag";
+import gql from 'graphql-tag';
 
 const createOrModifyToken = gql`mutation createToken($scopes: [String]!, $referer: [String], $ips:[String]) {
     jwtToken(scopes:$scopes, referer: $referer, ips: $ips) {
@@ -7,4 +7,4 @@ const createOrModifyToken = gql`mutation createToken($scopes: [String]!, $refere
     }
 }`;
 
-export { createOrModifyToken };
+export {createOrModifyToken};

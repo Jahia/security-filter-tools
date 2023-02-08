@@ -1,7 +1,6 @@
 import React, {Suspense} from 'react';
 import {registry} from '@jahia/ui-extender';
-import {Jwt,Loader} from '@jahia/moonstone';
-
+import {Jwt, Loader} from '@jahia/moonstone';
 
 export default function () {
     window.jahia.i18n.loadNamespaces('security-filter-tools');

@@ -3,6 +3,7 @@ import {withStyles} from '@material-ui/core/styles';
 import Tooltip from '@material-ui/core/Tooltip';
 import {Add, Button, Edit} from '@jahia/moonstone';
 import TokenEditor from './tokenEditor';
+import PropTypes from 'prop-types';
 
 const styles = {
     root: {
@@ -14,14 +15,13 @@ const styles = {
         height: 100
     },
     loginContainer: {
-        display: "flex",
-        alignItems: "center",
-        margin: "20px;"
+        display: 'flex',
+        alignItems: 'center',
+        margin: '20px;'
     }
 };
 
 class TokenManager extends React.Component {
-
     constructor(props) {
         super(props);
         this.state = {
@@ -35,66 +35,83 @@ class TokenManager extends React.Component {
     onTokenCreation(token) {
         this.setState({
             token: token
-        })
+        });
     }
 
     render() {
         let {classes} = this.props;
         let {token, showEditCreateDialog} = this.state;
-        if (token == null) {
+        if (token === null) {
             return this.addToken();
         }
-        return <div className={classes.root}>
-            <TokenEditor open={showEditCreateDialog}
-                         onTokenCreation={this.onTokenCreation}
-                         close={this.toggleDialog}
-                         {...this.getClaims(token.claims)}/>
-            <p>
-                <textarea className={classes.textArea} value={token.token} readOnly={true}/>
-                {this.editButton()}
-            </p>
-        </div>;
+
+        return (
+            <div className={classes.root}>
+                <TokenEditor open={showEditCreateDialog}
+                             close={this.toggleDialog}
+                             onTokenCreation={this.onTokenCreation}
+                             {...this.getClaims(token.claims)}/>
+                <p>
+                    <textarea readOnly className={classes.textArea} value={token.token}/>
+                    {this.editButton()}
+                </p>
+            </div>
+        );
     }
 
     addToken() {
-        return <div>
-            <TokenEditor open={this.state.showEditCreateDialog}
-                         close={this.toggleDialog}
-                         onTokenCreation={this.onTokenCreation}
-                         scopes={""} referer={""} ips={""}/>
-            <Tooltip title={"Add token"} placement="top-start">
-                <Button variant="ghost" size="big" onClick={() => this.setState({showEditCreateDialog: true})}
-                        icon={<Add/>}/>
-            </Tooltip>
-        </div>
+        return (
+            <div>
+                <TokenEditor isOpen={this.state.showEditCreateDialog}
+                             close={this.toggleDialog}
+                             scopes=""
+                             referer=""
+                             ips=""
+                             onTokenCreation={this.onTokenCreation}/>
+                <Tooltip title="Add token" placement="top-start">
+                    <Button variant="ghost"
+                            size="big"
+                            icon={<Add/>}
+                            onClick={() => this.setState({showEditCreateDialog: true})}/>
+                </Tooltip>
+            </div>
+        );
     }
 
     editButton() {
-        return <Button variant="ghost" size="big" onClick={() => this.toggleDialog()} icon={<Edit/>}/>
+        return <Button variant="ghost" size="big" icon={<Edit/>} onClick={() => this.toggleDialog()}/>;
     }
 
     toggleDialog() {
-        this.setState({
-            showEditCreateDialog: !this.state.showEditCreateDialog
-        })
+        this.setState(previousSate => {
+            return {
+                ...previousSate,
+                showEditCreateDialog: !previousSate.showEditCreateDialog
+            };
+        });
     }
 
     getClaims(claimsJson) {
         if (claimsJson) {
             const claims = JSON.parse(claimsJson);
             return {
-                scopes: claims.scopes.join(","),
-                referer: claims.referer ? claims.referer.join(",") : "",
-                ips: claims.ips ? claims.ips.join(",") : ""
-            }
+                scopes: claims.scopes.join(','),
+                referer: claims.referer ? claims.referer.join(',') : '',
+                ips: claims.ips ? claims.ips.join(',') : ''
+            };
         }
-        return {
-            scopes: "",
-            referer: "",
-            ips: ""
-        }
-    }
 
+        return {
+            scopes: '',
+            referer: '',
+            ips: ''
+        };
+    }
 }
+
+TokenManager.propTypes = {
+    dxContext: PropTypes.object.isRequired,
+    classes: PropTypes.object.isRequired
+};
 
 export default withStyles(styles)(TokenManager);
