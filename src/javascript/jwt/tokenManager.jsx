@@ -62,7 +62,7 @@ class TokenManager extends React.Component {
     addToken() {
         return (
             <div>
-                <TokenEditor open={this.state.showEditCreateDialog}
+                <TokenEditor isOpen={this.state.showEditCreateDialog}
                              close={this.toggleDialog}
                              scopes=""
                              referer=""

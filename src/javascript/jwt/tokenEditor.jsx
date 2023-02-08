@@ -36,11 +36,11 @@ class TokenEditor extends React.Component {
     }
 
     render() {
-        const {classes, open, scopes, referer, ips} = this.props;
+        const {classes, isOpen, scopes, referer, ips} = this.props;
 
         return (
             <Dialog
-                    open={open}
+                    open={isOpen}
                     aria-labelledby="alert-dialog-title"
                     aria-describedby="alert-dialog-description"
             >
@@ -165,7 +165,7 @@ class TokenEditor extends React.Component {
 
 TokenEditor.propTypes = {
     classes: PropTypes.object.isRequired,
-    open: PropTypes.bool.isRequired,
+    isOpen: PropTypes.bool.isRequired,
     close: PropTypes.func.isRequired,
     scopes: PropTypes.string.isRequired,
     referer: PropTypes.string.isRequired,
