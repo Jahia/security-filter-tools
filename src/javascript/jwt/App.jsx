@@ -8,8 +8,8 @@ import TokenManager from './tokenManager';
 
 const styles = {
     root: {
-        flexGrow: 1,
-    },
+        flexGrow: 1
+    }
 };
 
 function App(props) {
@@ -30,6 +30,7 @@ function App(props) {
 
 App.propTypes = {
     classes: PropTypes.object.isRequired,
+    dxContext: PropTypes.object.isRequired
 };
 
 export default withStyles(styles)(App);
