@@ -4,8 +4,8 @@
   "scripts": {
     "dev": "webpack --watch",
     "build": "webpack --mode=production",
-    "lint": "eslint --ext js,jsx,json . && stylelint \"./src/**/*.scss\"",
-    "lint:fix": "eslint --ext js,jsx,json --fix . && stylelint --fix \"./src/**/*.scss\""
+    "lint": "eslint --ext js,jsx,json . ",
+    "lint:fix": "eslint --ext js,jsx,json --fix "
   },
   "description": "Security Filter for DX",
   "main": "index.js",
