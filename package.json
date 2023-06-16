@@ -5,7 +5,8 @@
     "dev": "webpack --watch",
     "build": "webpack --mode=production",
     "lint": "eslint --ext js,jsx,json . ",
-    "lint:fix": "eslint --ext js,jsx,json --fix "
+    "lint:fix": "eslint --ext js,jsx,json --fix ",
+    "sync-pom": "sync-pom-version --use-yarn"
   },
   "description": "Security Filter for DX",
   "main": "index.js",
@@ -58,6 +59,7 @@
     "sass-loader": "^12.1.0",
     "style-loader": "^3.3.0",
     "stylelint": "^13.7.1",
+    "sync-pom-version-to-package": "^1.6.1",
     "webpack": "^5.55.1",
     "webpack-bundle-analyzer": "^4.4.2",
     "webpack-cli": "^4.8.0"
