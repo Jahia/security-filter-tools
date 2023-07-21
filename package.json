@@ -1,6 +1,6 @@
 {
   "name": "@jahia/security-filter",
-  "version": "2.0.0",
+  "version": "2.5.0-SNAPSHOT",
   "scripts": {
     "dev": "webpack --watch",
     "build": "webpack --mode=production",
@@ -42,6 +42,7 @@
     "@babel/core": "^7.15.5",
     "@babel/preset-env": "^7.15.6",
     "@babel/preset-react": "^7.14.5",
+    "@cyclonedx/webpack-plugin": "^3.6.1",
     "@jahia/eslint-config": "^1.1.0",
     "@jahia/stylelint-config": "^0.0.3",
     "babel-loader": "^8.2.2",
@@ -60,7 +61,7 @@
     "style-loader": "^3.3.0",
     "stylelint": "^13.7.1",
     "sync-pom-version-to-package": "^1.6.1",
-    "webpack": "^5.55.1",
+    "webpack": "^5.88.2",
     "webpack-bundle-analyzer": "^4.4.2",
     "webpack-cli": "^4.8.0"
   }
