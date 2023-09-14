@@ -75,7 +75,7 @@
             com.fasterxml.jackson.core;version="[2.10,3)",
             com.fasterxml.jackson.databind;version="[2.10,3)",
             javax.jcr;version="[2.0,3)",
-            graphql.annotations.annotationTypes;version="[7.2,9)",
+            graphql.annotations.annotationTypes;version="[7.2,99)",
             org.jahia.bundles.securityfilter;version="[8.1,9)",
             org.jahia.modules.graphql.provider.dxm;version="[2.7,3)",
             org.jahia.osgi,
