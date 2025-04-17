@@ -12,7 +12,7 @@ const styles = {
     }
 };
 
-function App(props) {
+const App = props => {
     const {classes, dxContext} = props;
     return (
         <div className={classes.root}>
@@ -26,7 +26,7 @@ function App(props) {
             <TokenManager dxContext={dxContext}/>
         </div>
     );
-}
+};
 
 App.propTypes = {
     classes: PropTypes.object.isRequired,

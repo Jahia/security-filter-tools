@@ -69,7 +69,7 @@
     <properties>
         <jahia-module-type>system</jahia-module-type>
         <jahia-depends>graphql-dxm-provider</jahia-depends>
-        <jahia-module-signature>MCwCFQCLhKviEWCG9suyMxPxpXnFdSUXugITPs9QfwOKulM0ZrwlHu3GnyaWoA==</jahia-module-signature>
+        <jahia-module-signature>MCwCFFJpMtVVS5BC/uVw4Wuou0vGidhgAhQW6LNfL9OVXlEc8WFv5mNnDNtuuA==</jahia-module-signature>
         <jahia.plugin.version>6.9</jahia.plugin.version>
         <import-package>
             com.auth0.jwt.interfaces,
@@ -149,8 +149,8 @@
                             <goal>install-node-and-yarn</goal>
                         </goals>
                         <configuration>
-                            <nodeVersion>v14.21.3</nodeVersion>
-                            <yarnVersion>v1.22.10</yarnVersion>
+                            <nodeVersion>v22.14.0</nodeVersion>
+                            <yarnVersion>v1.22.21</yarnVersion>
                         </configuration>
                     </execution>
                     <execution>

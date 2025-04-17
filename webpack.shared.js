@@ -9,8 +9,6 @@ const sharedDeps = [
     'react-i18next',
     'i18next',
     'i18next-xhr-backend',
-    'graphql-tag',
-    'react-apollo',
     'react-redux',
     'redux',
     'rxjs',
@@ -20,16 +18,11 @@ const sharedDeps = [
     // JAHIA PACKAGES
     '@jahia/ui-extender',
     '@jahia/moonstone',
-    '@jahia/moonstone-alpha',
     '@jahia/data-helper',
-
-    // Apollo
-    '@apollo/react-common',
-    '@apollo/react-components',
-    '@apollo/react-hooks',
 
     // DEPRECATED JAHIA PACKAGES
     '@jahia/design-system-kit',
+    '@jahia/moonstone-alpha',
     '@jahia/react-material',
     '@jahia/icons'
 ];
@@ -41,14 +34,10 @@ const singletonDeps = [
     'react-router-dom',
     'react-i18next',
     'i18next',
-    'react-apollo',
     'react-redux',
     'redux',
     '@jahia/moonstone',
-    '@jahia/ui-extender',
-    '@apollo/react-common',
-    '@apollo/react-components',
-    '@apollo/react-hooks'
+    '@jahia/ui-extender'
 ];
 
 const notImported = [];

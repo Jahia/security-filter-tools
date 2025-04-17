@@ -1,6 +1,6 @@
 var path = require('path');
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
-const CleanWebpackPlugin = require('clean-webpack-plugin');
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const ModuleFederationPlugin = require("webpack/lib/container/ModuleFederationPlugin");
 const shared = require("./webpack.shared")
@@ -101,7 +101,7 @@ module.exports = (env, argv) => {
                 },
                 shared,
             }),
-            new CleanWebpackPlugin(path.resolve(__dirname, 'src/main/resources/javascript/apps/'), {verbose: false}),
+            new CleanWebpackPlugin({verbose: false, cleanOnceBeforeBuildPatterns: [path.resolve(__dirname, 'src/main/resources/javascript/apps/')]}),
             new CopyWebpackPlugin({patterns: [{from: './package.json', to: ''}]}),
             new CycloneDxWebpackPlugin(cycloneDxWebpackPluginOptions)
         ],
