@@ -72,7 +72,10 @@
         <jahia-module-signature>MCwCFFJpMtVVS5BC/uVw4Wuou0vGidhgAhQW6LNfL9OVXlEc8WFv5mNnDNtuuA==</jahia-module-signature>
         <jahia.plugin.version>6.9</jahia.plugin.version>
         <import-package>
+            com.auth0.jwt,
             com.auth0.jwt.interfaces,
+            com.auth0.jwt.exceptions,
+            com.auth0.jwt.algorithms,
             com.fasterxml.jackson.core;version="[2.10,3)",
             com.fasterxml.jackson.databind;version="[2.10,3)",
             javax.jcr;version="[2.0,3)",
@@ -109,12 +112,7 @@
             <groupId>com.auth0</groupId>
             <artifactId>java-jwt</artifactId>
             <version>3.4.0</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>com.fasterxml.jackson.core</groupId>
-                    <artifactId>jackson-databind</artifactId>
-                </exclusion>
-            </exclusions>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.jahia.bundles</groupId>
