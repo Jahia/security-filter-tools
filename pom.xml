@@ -142,7 +142,6 @@
                 <configuration>
                     <instructions>
                         <_dsannotations>*</_dsannotations>
-                        <Export-Package>com.auth0.jwt.interfaces</Export-Package>
                     </instructions>
                 </configuration>
             </plugin>
