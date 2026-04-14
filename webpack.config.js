@@ -3,7 +3,8 @@ const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPl
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const ModuleFederationPlugin = require("webpack/lib/container/ModuleFederationPlugin");
-const shared = require("./webpack.shared")
+const getModuleFederationConfig = require('@jahia/webpack-config/getModuleFederationConfig');
+const packageJson = require('./package.json');
 const {CycloneDxWebpackPlugin} = require('@cyclonedx/webpack-plugin');
 
 /** @type {import('@cyclonedx/webpack-plugin').CycloneDxWebpackPluginOptions} */
@@ -15,9 +16,7 @@ const cycloneDxWebpackPluginOptions = {
 
 module.exports = (env, argv) => {
     const config = {
-        entry: {
-            main: [path.resolve(__dirname, 'src/javascript/index.js')]
-        },
+        entry: {},
         output: {
             path: path.resolve(__dirname, 'src/main/resources/javascript/apps/'),
             filename: 'securityfiltertools.bundle.js',
@@ -89,18 +88,7 @@ module.exports = (env, argv) => {
             ]
         },
         plugins: [
-            new ModuleFederationPlugin({
-                name: "securityfiltertools",
-                library: { type: "assign", name: "appShell.remotes.securityfiltertools" },
-                filename: "remoteEntry.js",
-                exposes: {
-                    './init': './src/javascript/init'
-                },
-                remotes: {
-                    '@jahia/app-shell': 'appShellRemote',
-                },
-                shared,
-            }),
+            new ModuleFederationPlugin(getModuleFederationConfig(packageJson)),
             new CleanWebpackPlugin({verbose: false, cleanOnceBeforeBuildPatterns: [path.resolve(__dirname, 'src/main/resources/javascript/apps/')]}),
             new CopyWebpackPlugin({patterns: [{from: './package.json', to: ''}]}),
             new CycloneDxWebpackPlugin(cycloneDxWebpackPluginOptions)
