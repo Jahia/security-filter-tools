@@ -88,7 +88,8 @@ module.exports = (env, argv) => {
             ]
         },
         plugins: [
-            new ModuleFederationPlugin(getModuleFederationConfig(packageJson)),
+            // export @apollo/react-hooks for backward compatibility of other modules that are using it such as personal-api-tokens and jahia-user-entries
+            new ModuleFederationPlugin(getModuleFederationConfig(packageJson, {}, ['@apollo/react-hooks'])),
             new CleanWebpackPlugin({verbose: false, cleanOnceBeforeBuildPatterns: [path.resolve(__dirname, 'src/main/resources/javascript/apps/')]}),
             new CopyWebpackPlugin({patterns: [{from: './package.json', to: ''}]}),
             new CycloneDxWebpackPlugin(cycloneDxWebpackPluginOptions)
