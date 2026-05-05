@@ -11,7 +11,7 @@ jobs:
     steps:
       # Providing the SSH PRIVATE of a user part of an admin group
       # is necessary to bypass PR checks
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           ssh-key: ${{ secrets.GH_SSH_PRIVATE_KEY_JAHIACI }}
 
@@ -26,5 +26,3 @@ jobs:
         with:
           release_id: ${{ github.event.release.id }}
           release_version: ${{ github.event.release.tag_name }}
-          mvn_settings_filepath: '.github/maven.settings.xml'
-
