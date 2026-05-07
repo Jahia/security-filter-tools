@@ -69,7 +69,7 @@
     <properties>
         <jahia-module-type>system</jahia-module-type>
         <jahia-depends>graphql-dxm-provider</jahia-depends>
-        <jahia-module-signature>MCwCFFJpMtVVS5BC/uVw4Wuou0vGidhgAhQW6LNfL9OVXlEc8WFv5mNnDNtuuA==</jahia-module-signature>
+        <jahia-module-signature>MC0CFAiw8vBP/S5l05ysOh33I5wmSIo7AhUAjUgOhGDdmxf2dsA0RxPQE4g2J6w=</jahia-module-signature>
         <jahia.plugin.version>6.9</jahia.plugin.version>
         <import-package>
             com.auth0.jwt,
