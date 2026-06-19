@@ -69,7 +69,7 @@
     <properties>
         <jahia-module-type>system</jahia-module-type>
         <jahia-depends>graphql-dxm-provider</jahia-depends>
-        <jahia-module-signature>MCwCFEg0Ns0xbSEk7APCxgjOTAKs9b5eAhQm+ofRErocskU6hCDo37RtXSV4Bg==</jahia-module-signature>
+        <jahia-module-signature>MCwCFHmurW+1M/uLAl7jBYkm6t/ZeD61AhRUko1r5Thakj8ELbcEC4WmjZqFog==</jahia-module-signature>
         <jahia.plugin.version>6.14.0</jahia.plugin.version>
         <import-package>
             com.fasterxml.jackson.core;version="[2.10,3)",
