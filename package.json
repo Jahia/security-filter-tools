@@ -1,6 +1,6 @@
 {
   "name": "@jahia/security-filter",
-  "version": "2.7.0-SNAPSHOT",
+  "version": "2.6.1",
   "scripts": {
     "dev": "webpack --watch",
     "build": "webpack --mode=production",
