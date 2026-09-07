@@ -59,6 +59,8 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.List;
 
 @Component(
@@ -139,11 +141,10 @@ public class JWTFilter extends AbstractServletFilter {
         THREAD_LOCAL.set(null);
     }
 
-    private void verifyToken(HttpServletRequest httpRequest, TokenVerificationResult tvr, DecodedJWT decodedToken) {
+    void verifyToken(HttpServletRequest httpRequest, TokenVerificationResult tvr, DecodedJWT decodedToken) {
         String referer = httpRequest.getHeader("referer");
         List<String> claimReferers = decodedToken.getClaim("referer").asList(String.class);
-        String ip = httpRequest.getHeader("X-FORWARDED-FOR") != null
-                ? httpRequest.getHeader("X-FORWARDED-FOR") : httpRequest.getRemoteAddr();
+        String ip = httpRequest.getRemoteAddr();
         List<String> ips = decodedToken.getClaim("ips").asList(String.class);
 
         if (claimReferers != null && !claimReferers.isEmpty() && !checkReferer(claimReferers, referer)) {
@@ -162,12 +163,59 @@ public class JWTFilter extends AbstractServletFilter {
     }
 
     private boolean checkReferer(List<String> claimReferers, String referer) {
+        URI refererUri = parseAbsolute(referer);
+        if (refererUri == null) {
+            return false;
+        }
         for (String claimReferer : claimReferers) {
-            if (referer.startsWith(claimReferer)) {
+            URI claimUri = parseAbsolute(claimReferer);
+            if (claimUri != null && sameOrigin(claimUri, refererUri)
+                    && coversPath(claimUri.getPath(), refererUri.getPath())) {
                 return true;
             }
         }
         return false;
+    }
+
+    private static URI parseAbsolute(String value) {
+        if (StringUtils.isEmpty(value)) {
+            return null;
+        }
+        try {
+            URI uri = new URI(value).normalize();
+            return uri.getScheme() != null && uri.getHost() != null ? uri : null;
+        } catch (URISyntaxException e) {
+            return null;
+        }
+    }
+
+    private static boolean sameOrigin(URI claimUri, URI refererUri) {
+        return claimUri.getScheme().equalsIgnoreCase(refererUri.getScheme())
+                && claimUri.getHost().equalsIgnoreCase(refererUri.getHost())
+                && effectivePort(claimUri) == effectivePort(refererUri);
+    }
+
+    private static int effectivePort(URI uri) {
+        if (uri.getPort() != -1) {
+            return uri.getPort();
+        }
+        if ("https".equalsIgnoreCase(uri.getScheme())) {
+            return 443;
+        }
+        return "http".equalsIgnoreCase(uri.getScheme()) ? 80 : -1;
+    }
+
+    private static boolean coversPath(String claimPath, String refererPath) {
+        String claimed = normalizePath(claimPath);
+        String actual = normalizePath(refererPath);
+        return "/".equals(claimed) || actual.equals(claimed) || actual.startsWith(claimed + "/");
+    }
+
+    private static String normalizePath(String path) {
+        if (StringUtils.isEmpty(path)) {
+            return "/";
+        }
+        return path.length() > 1 && path.endsWith("/") ? path.substring(0, path.length() - 1) : path;
     }
 
     @Override
