@@ -59,8 +59,13 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
+import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 
 @Component(
@@ -163,59 +168,101 @@ public class JWTFilter extends AbstractServletFilter {
     }
 
     private boolean checkReferer(List<String> claimReferers, String referer) {
-        URI refererUri = parseAbsolute(referer);
-        if (refererUri == null) {
+        RefererParts actual = RefererParts.parse(referer);
+        if (actual == null) {
             return false;
         }
         for (String claimReferer : claimReferers) {
-            URI claimUri = parseAbsolute(claimReferer);
-            if (claimUri != null && sameOrigin(claimUri, refererUri)
-                    && coversPath(claimUri.getPath(), refererUri.getPath())) {
+            RefererParts claimed = RefererParts.parse(claimReferer);
+            if (claimed != null && claimed.covers(actual)) {
                 return true;
             }
         }
         return false;
     }
 
-    private static URI parseAbsolute(String value) {
-        if (StringUtils.isEmpty(value)) {
-            return null;
-        }
-        try {
-            URI uri = new URI(value).normalize();
-            return uri.getScheme() != null && uri.getHost() != null ? uri : null;
-        } catch (URISyntaxException e) {
-            return null;
-        }
-    }
+    /**
+     * The parts of an absolute http(s) URL that a token's {@code referer} claim is matched on.
+     * Parsing goes through {@link URL} and not {@link java.net.URI}, because a URI rejects characters a
+     * browser sends unencoded in a query and reports no host for an authority such as
+     * {@code intra_net.example.com}.
+     */
+    private static final class RefererParts {
 
-    private static boolean sameOrigin(URI claimUri, URI refererUri) {
-        return claimUri.getScheme().equalsIgnoreCase(refererUri.getScheme())
-                && claimUri.getHost().equalsIgnoreCase(refererUri.getHost())
-                && effectivePort(claimUri) == effectivePort(refererUri);
-    }
+        private final String scheme;
+        private final String host;
+        private final int port;
+        /** Percent-decoded, with {@code .} and {@code ..} segments resolved. Empty for the root. */
+        private final String path;
 
-    private static int effectivePort(URI uri) {
-        if (uri.getPort() != -1) {
-            return uri.getPort();
+        private RefererParts(String scheme, String host, int port, String path) {
+            this.scheme = scheme;
+            this.host = host;
+            this.port = port;
+            this.path = path;
         }
-        if ("https".equalsIgnoreCase(uri.getScheme())) {
-            return 443;
-        }
-        return "http".equalsIgnoreCase(uri.getScheme()) ? 80 : -1;
-    }
 
-    private static boolean coversPath(String claimPath, String refererPath) {
-        String claimed = normalizePath(claimPath);
-        String actual = normalizePath(refererPath);
-        return "/".equals(claimed) || actual.equals(claimed) || actual.startsWith(claimed + "/");
-    }
-
-    private static String normalizePath(String path) {
-        if (StringUtils.isEmpty(path)) {
-            return "/";
+        static RefererParts parse(String value) {
+            if (StringUtils.isEmpty(value)) {
+                return null;
+            }
+            URL url;
+            try {
+                url = new URL(value);
+            } catch (MalformedURLException e) {
+                logger.debug("Referer value is not an absolute URL: {}", value);
+                return null;
+            }
+            String scheme = url.getProtocol();
+            if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
+                logger.debug("Referer value carries no http(s) scheme: {}", value);
+                return null;
+            }
+            if (StringUtils.isEmpty(url.getHost())) {
+                logger.debug("Referer value carries no host: {}", value);
+                return null;
+            }
+            String path = resolvePath(url.getPath());
+            if (path == null) {
+                logger.debug("Referer path cannot be decoded: {}", value);
+                return null;
+            }
+            int port = url.getPort() != -1 ? url.getPort() : url.getDefaultPort();
+            return new RefererParts(scheme, url.getHost(), port, path);
         }
-        return path.length() > 1 && path.endsWith("/") ? path.substring(0, path.length() - 1) : path;
+
+        /**
+         * Resolves a raw path to the form the server addresses: decoded first, so that an encoded
+         * {@code ..} segment resolves instead of travelling on as a name.
+         */
+        private static String resolvePath(String rawPath) {
+            String decoded;
+            try {
+                // '+' stands for itself in a path, and URLDecoder would read it as a space.
+                decoded = URLDecoder.decode(rawPath.replace("+", "%2B"), StandardCharsets.UTF_8.name());
+            } catch (IllegalArgumentException | UnsupportedEncodingException e) {
+                return null;
+            }
+            Deque<String> segments = new ArrayDeque<>();
+            for (String segment : decoded.split("/")) {
+                if (segment.isEmpty() || ".".equals(segment)) {
+                    continue;
+                }
+                if ("..".equals(segment)) {
+                    segments.pollLast();
+                } else {
+                    segments.addLast(segment);
+                }
+            }
+            return segments.isEmpty() ? "" : "/" + String.join("/", segments);
+        }
+
+        boolean covers(RefererParts actual) {
+            return scheme.equalsIgnoreCase(actual.scheme)
+                    && host.equalsIgnoreCase(actual.host)
+                    && port == actual.port
+                    && (actual.path.equals(path) || actual.path.startsWith(path + "/"));
+        }
     }
 
     @Override

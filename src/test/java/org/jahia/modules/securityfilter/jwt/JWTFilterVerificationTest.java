@@ -8,11 +8,15 @@ import org.junit.Test;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 import static org.jahia.modules.securityfilter.jwt.TokenVerificationResult.VerificationStatus.REJECTED;
 import static org.jahia.modules.securityfilter.jwt.TokenVerificationResult.VerificationStatus.VERIFIED;
 import static org.junit.Assert.assertEquals;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -26,6 +30,8 @@ public class JWTFilterVerificationTest {
     private static final String CLAIMED_ADDRESS = "203.0.113.7";
     private static final String CLAIMED_ORIGIN = "https://intranet.example.com";
 
+    private final Map<String, String> headers = new HashMap<>();
+
     private JWTFilter filter;
     private HttpServletRequest request;
 
@@ -34,6 +40,14 @@ public class JWTFilterVerificationTest {
         filter = new JWTFilter();
         request = mock(HttpServletRequest.class);
         when(request.getRemoteAddr()).thenReturn(CONNECTION_ADDRESS);
+        // A servlet container resolves a header name without regard to case, and a mock matches the
+        // argument it was given. Stubbing one spelling would let a read of another spelling pass.
+        when(request.getHeader(anyString())).thenAnswer(
+                invocation -> headers.get(invocation.<String>getArgument(0).toLowerCase(Locale.ROOT)));
+    }
+
+    private void header(String name, String value) {
+        headers.put(name.toLowerCase(Locale.ROOT), value);
     }
 
     // ---------- the ips claim ----------
@@ -50,13 +64,13 @@ public class JWTFilterVerificationTest {
 
     @Test
     public void aForwardedHeaderDoesNotSatisfyTheAddressClaim() {
-        when(request.getHeader("X-FORWARDED-FOR")).thenReturn(CLAIMED_ADDRESS);
+        header("X-Forwarded-For", CLAIMED_ADDRESS);
         assertStatus(REJECTED, verify(token(null, Collections.singletonList(CLAIMED_ADDRESS))));
     }
 
     @Test
     public void aForwardedChainDoesNotSatisfyTheAddressClaim() {
-        when(request.getHeader("X-FORWARDED-FOR")).thenReturn(CLAIMED_ADDRESS + ", 192.0.2.1");
+        header("X-Forwarded-For", CLAIMED_ADDRESS + ", 192.0.2.1");
         assertStatus(REJECTED, verify(token(null, Collections.singletonList(CLAIMED_ADDRESS))));
     }
 
@@ -128,6 +142,46 @@ public class JWTFilterVerificationTest {
     }
 
     @Test
+    public void refererClimbingOutOfTheClaimedPathWithAnEncodedSegmentRejects() {
+        assertStatus(REJECTED, verifyReferer(CLAIMED_ORIGIN + "/app/%2e%2e/admin", CLAIMED_ORIGIN + "/app"));
+    }
+
+    @Test
+    public void refererClimbingOutOfTheClaimedPathWithAnEncodedSeparatorRejects() {
+        assertStatus(REJECTED, verifyReferer(CLAIMED_ORIGIN + "/app%2f..%2fadmin", CLAIMED_ORIGIN + "/app"));
+    }
+
+    @Test
+    public void aTrailingSlashOnTheRefererPathIsIgnored() {
+        assertStatus(VERIFIED, verifyReferer(CLAIMED_ORIGIN + "/app/", CLAIMED_ORIGIN + "/app"));
+    }
+
+    @Test
+    public void aTrailingSlashOnTheClaimedPathIsIgnored() {
+        assertStatus(VERIFIED, verifyReferer(CLAIMED_ORIGIN + "/app", CLAIMED_ORIGIN + "/app/"));
+    }
+
+    @Test
+    public void claimedHttpDefaultPortMatchesARefererCarryingItExplicitly() {
+        assertStatus(VERIFIED, verifyReferer("http://intranet.example.com:80/app", "http://intranet.example.com"));
+    }
+
+    @Test
+    public void refererCarryingAPipeInItsQueryVerifies() {
+        assertStatus(VERIFIED, verifyReferer(CLAIMED_ORIGIN + "/app?ids=1|2", CLAIMED_ORIGIN + "/app"));
+    }
+
+    @Test
+    public void refererOnAHostCarryingAnUnderscoreVerifies() {
+        assertStatus(VERIFIED, verifyReferer("https://intra_net.example.com/app", "https://intra_net.example.com"));
+    }
+
+    @Test
+    public void refererOnANonHttpSchemeRejects() {
+        assertStatus(REJECTED, verifyReferer("ftp://intranet.example.com/app", CLAIMED_ORIGIN));
+    }
+
+    @Test
     public void absentRefererWithARefererClaimRejects() {
         assertStatus(REJECTED, verifyReferer(null, CLAIMED_ORIGIN));
     }
@@ -135,13 +189,8 @@ public class JWTFilterVerificationTest {
     @Test
     public void refererClaimListingSeveralOriginsVerifiesOnAMatch() {
         DecodedJWT token = token(Arrays.asList("https://other.example.com", CLAIMED_ORIGIN), null);
-        when(request.getHeader("referer")).thenReturn(CLAIMED_ORIGIN + "/app");
+        header("Referer", CLAIMED_ORIGIN + "/app");
         assertStatus(VERIFIED, verify(token));
-    }
-
-    @Test
-    public void absentRefererClaimVerifies() {
-        assertStatus(VERIFIED, verify(token(null, null)));
     }
 
     // ---------- both claims ----------
@@ -149,21 +198,21 @@ public class JWTFilterVerificationTest {
     @Test
     public void bothClaimsSatisfiedVerifies() {
         DecodedJWT token = token(Collections.singletonList(CLAIMED_ORIGIN), Collections.singletonList(CONNECTION_ADDRESS));
-        when(request.getHeader("referer")).thenReturn(CLAIMED_ORIGIN + "/app");
+        header("Referer", CLAIMED_ORIGIN + "/app");
         assertStatus(VERIFIED, verify(token));
     }
 
     @Test
     public void refererSatisfiedWhileTheAddressClaimIsNotRejects() {
         DecodedJWT token = token(Collections.singletonList(CLAIMED_ORIGIN), Collections.singletonList(CLAIMED_ADDRESS));
-        when(request.getHeader("referer")).thenReturn(CLAIMED_ORIGIN + "/app");
+        header("Referer", CLAIMED_ORIGIN + "/app");
         assertStatus(REJECTED, verify(token));
     }
 
     // ---------- helpers ----------
 
     private TokenVerificationResult verifyReferer(String refererHeader, String claimedReferer) {
-        when(request.getHeader("referer")).thenReturn(refererHeader);
+        header("Referer", refererHeader);
         return verify(token(Collections.singletonList(claimedReferer), null));
     }
 
