@@ -59,6 +59,13 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 
 @Component(
@@ -139,11 +146,10 @@ public class JWTFilter extends AbstractServletFilter {
         THREAD_LOCAL.set(null);
     }
 
-    private void verifyToken(HttpServletRequest httpRequest, TokenVerificationResult tvr, DecodedJWT decodedToken) {
+    void verifyToken(HttpServletRequest httpRequest, TokenVerificationResult tvr, DecodedJWT decodedToken) {
         String referer = httpRequest.getHeader("referer");
         List<String> claimReferers = decodedToken.getClaim("referer").asList(String.class);
-        String ip = httpRequest.getHeader("X-FORWARDED-FOR") != null
-                ? httpRequest.getHeader("X-FORWARDED-FOR") : httpRequest.getRemoteAddr();
+        String ip = httpRequest.getRemoteAddr();
         List<String> ips = decodedToken.getClaim("ips").asList(String.class);
 
         if (claimReferers != null && !claimReferers.isEmpty() && !checkReferer(claimReferers, referer)) {
@@ -159,15 +165,112 @@ public class JWTFilter extends AbstractServletFilter {
             tvr.setVerificationStatusCode(TokenVerificationResult.VerificationStatus.VERIFIED);
             tvr.setMessage("Token verified");
         }
+        // The message this method sets is read by no component, so the decision reaches an operator
+        // here or nowhere. A request can repeat it, which is why it stays at debug.
+        logger.debug("JWT token verification: {}", tvr.getMessage());
     }
 
     private boolean checkReferer(List<String> claimReferers, String referer) {
+        RefererParts actual = RefererParts.parse(referer);
+        if (actual == null) {
+            logger.debug("Request referer is not an absolute http(s) URL: {}", referer);
+            return false;
+        }
         for (String claimReferer : claimReferers) {
-            if (referer.startsWith(claimReferer)) {
+            RefererParts claimed = RefererParts.parse(claimReferer);
+            if (claimed == null || claimed.query != null) {
+                // Only the issuer of a token writes its claim, so an unusable entry is a
+                // configuration error that no request can provoke.
+                logger.warn("Ignoring a token referer claim that is not an absolute http(s) URL"
+                        + " without a query: {}", claimReferer);
+            } else if (claimed.covers(actual)) {
                 return true;
             }
         }
         return false;
+    }
+
+    /**
+     * The parts of an absolute http(s) URL that a token's {@code referer} claim is matched on.
+     * Parsing goes through {@link java.net.URL} and not {@link java.net.URI}, because a URI rejects
+     * characters a browser sends unencoded in a query and reports no host for an authority such as
+     * {@code intra_net.example.com}.
+     */
+    private static final class RefererParts {
+
+        private final String scheme;
+        private final String host;
+        private final int port;
+        /** Percent-decoded, with {@code .} and {@code ..} segments resolved. Empty for the root. */
+        private final String path;
+        /** Null when the URL carries no query. A claim carrying one is refused. */
+        private final String query;
+
+        private RefererParts(String scheme, String host, int port, String path, String query) {
+            this.scheme = scheme;
+            this.host = host;
+            this.port = port;
+            this.path = path;
+            this.query = query;
+        }
+
+        static RefererParts parse(String value) {
+            if (StringUtils.isEmpty(value)) {
+                return null;
+            }
+            URL url;
+            try {
+                url = new URL(value);
+            } catch (MalformedURLException e) {
+                return null;
+            }
+            String scheme = url.getProtocol();
+            if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
+                return null;
+            }
+            if (StringUtils.isEmpty(url.getHost())) {
+                return null;
+            }
+            String path = resolvePath(url.getPath());
+            if (path == null) {
+                return null;
+            }
+            int port = url.getPort() != -1 ? url.getPort() : url.getDefaultPort();
+            return new RefererParts(scheme, url.getHost(), port, path, url.getQuery());
+        }
+
+        /**
+         * Resolves a raw path to the form the server addresses: decoded first, so that an encoded
+         * {@code ..} segment resolves instead of travelling on as a name.
+         */
+        private static String resolvePath(String rawPath) {
+            String decoded;
+            try {
+                // '+' stands for itself in a path, and URLDecoder would read it as a space.
+                decoded = URLDecoder.decode(rawPath.replace("+", "%2B"), StandardCharsets.UTF_8.name());
+            } catch (IllegalArgumentException | UnsupportedEncodingException e) {
+                return null;
+            }
+            Deque<String> segments = new ArrayDeque<>();
+            for (String segment : decoded.split("/")) {
+                if (segment.isEmpty() || ".".equals(segment)) {
+                    continue;
+                }
+                if ("..".equals(segment)) {
+                    segments.pollLast();
+                } else {
+                    segments.addLast(segment);
+                }
+            }
+            return segments.isEmpty() ? "" : "/" + String.join("/", segments);
+        }
+
+        boolean covers(RefererParts actual) {
+            return scheme.equalsIgnoreCase(actual.scheme)
+                    && host.equalsIgnoreCase(actual.host)
+                    && port == actual.port
+                    && (actual.path.equals(path) || actual.path.startsWith(path + "/"));
+        }
     }
 
     @Override
