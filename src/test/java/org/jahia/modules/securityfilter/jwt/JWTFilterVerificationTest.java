@@ -16,6 +16,8 @@ import java.util.Map;
 import static org.jahia.modules.securityfilter.jwt.TokenVerificationResult.VerificationStatus.REJECTED;
 import static org.jahia.modules.securityfilter.jwt.TokenVerificationResult.VerificationStatus.VERIFIED;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -29,6 +31,9 @@ public class JWTFilterVerificationTest {
     private static final String CONNECTION_ADDRESS = "198.51.100.9";
     private static final String CLAIMED_ADDRESS = "203.0.113.7";
     private static final String CLAIMED_ORIGIN = "https://intranet.example.com";
+    private static final String VERIFIED_MESSAGE = "Token verified";
+    private static final String REFERER_REJECTION = "Incorrect referer in token";
+    private static final String ADDRESS_REJECTION = "Your IP did not match any of the permitted IPs";
 
     private final Map<String, String> headers = new HashMap<>();
 
@@ -54,143 +59,206 @@ public class JWTFilterVerificationTest {
 
     @Test
     public void addressClaimMatchingTheConnectionAddressVerifies() {
-        assertStatus(VERIFIED, verify(token(null, Collections.singletonList(CONNECTION_ADDRESS))));
+        assertVerified(verify(token(null, Collections.singletonList(CONNECTION_ADDRESS))));
     }
 
     @Test
     public void addressClaimNotMatchingTheConnectionAddressRejects() {
-        assertStatus(REJECTED, verify(token(null, Collections.singletonList(CLAIMED_ADDRESS))));
+        assertRejected(ADDRESS_REJECTION, verify(token(null, Collections.singletonList(CLAIMED_ADDRESS))));
     }
 
     @Test
-    public void aForwardedHeaderDoesNotSatisfyTheAddressClaim() {
+    public void theAddressClaimIsMatchedOnTheConnectionAddressAndNotOnARequestHeader() {
         header("X-Forwarded-For", CLAIMED_ADDRESS);
-        assertStatus(REJECTED, verify(token(null, Collections.singletonList(CLAIMED_ADDRESS))));
+        assertRejected(ADDRESS_REJECTION, verify(token(null, Collections.singletonList(CLAIMED_ADDRESS))));
     }
 
     @Test
-    public void aForwardedChainDoesNotSatisfyTheAddressClaim() {
+    public void theAddressClaimIsMatchedOnTheConnectionAddressAndNotOnAHeaderChain() {
         header("X-Forwarded-For", CLAIMED_ADDRESS + ", 192.0.2.1");
-        assertStatus(REJECTED, verify(token(null, Collections.singletonList(CLAIMED_ADDRESS))));
+        assertRejected(ADDRESS_REJECTION, verify(token(null, Collections.singletonList(CLAIMED_ADDRESS))));
     }
 
     @Test
     public void absentAddressClaimVerifies() {
-        assertStatus(VERIFIED, verify(token(null, null)));
+        assertVerified(verify(token(null, null)));
     }
 
     @Test
     public void emptyAddressClaimVerifies() {
-        assertStatus(VERIFIED, verify(token(null, Collections.<String>emptyList())));
+        assertVerified(verify(token(null, Collections.<String>emptyList())));
     }
 
     @Test
     public void addressClaimListingSeveralAddressesVerifiesOnAMatch() {
-        assertStatus(VERIFIED, verify(token(null, Arrays.asList(CLAIMED_ADDRESS, CONNECTION_ADDRESS))));
+        assertVerified(verify(token(null, Arrays.asList(CLAIMED_ADDRESS, CONNECTION_ADDRESS))));
     }
 
     // ---------- the referer claim ----------
 
     @Test
     public void refererOnTheClaimedOriginVerifies() {
-        assertStatus(VERIFIED, verifyReferer(CLAIMED_ORIGIN + "/", CLAIMED_ORIGIN));
+        assertVerified(verifyReferer(CLAIMED_ORIGIN + "/", CLAIMED_ORIGIN));
     }
 
     @Test
     public void refererDeeperInTheClaimedPathVerifies() {
-        assertStatus(VERIFIED, verifyReferer(CLAIMED_ORIGIN + "/app/page?q=1", CLAIMED_ORIGIN + "/app"));
+        assertVerified(verifyReferer(CLAIMED_ORIGIN + "/app/page?q=1", CLAIMED_ORIGIN + "/app"));
     }
 
     @Test
     public void refererEqualToTheClaimedPathVerifies() {
-        assertStatus(VERIFIED, verifyReferer(CLAIMED_ORIGIN + "/app", CLAIMED_ORIGIN + "/app"));
+        assertVerified(verifyReferer(CLAIMED_ORIGIN + "/app", CLAIMED_ORIGIN + "/app"));
     }
 
     @Test
     public void refererOnAHostExtendingTheClaimedHostRejects() {
-        assertStatus(REJECTED, verifyReferer("https://intranet.example.com.other.test/app", CLAIMED_ORIGIN));
+        assertRejected(REFERER_REJECTION, verifyReferer("https://intranet.example.com.other.test/app", CLAIMED_ORIGIN));
     }
 
     @Test
     public void refererOnAPathSharingTheClaimedPrefixRejects() {
-        assertStatus(REJECTED, verifyReferer(CLAIMED_ORIGIN + "/application", CLAIMED_ORIGIN + "/app"));
+        assertRejected(REFERER_REJECTION, verifyReferer(CLAIMED_ORIGIN + "/application", CLAIMED_ORIGIN + "/app"));
     }
 
     @Test
     public void refererClimbingOutOfTheClaimedPathRejects() {
-        assertStatus(REJECTED, verifyReferer(CLAIMED_ORIGIN + "/app/../admin", CLAIMED_ORIGIN + "/app"));
+        assertRejected(REFERER_REJECTION, verifyReferer(CLAIMED_ORIGIN + "/app/../admin", CLAIMED_ORIGIN + "/app"));
     }
 
     @Test
     public void refererOnAnotherSchemeRejects() {
-        assertStatus(REJECTED, verifyReferer("http://intranet.example.com/app", CLAIMED_ORIGIN));
+        assertRejected(REFERER_REJECTION, verifyReferer("http://intranet.example.com/app", CLAIMED_ORIGIN));
     }
 
     @Test
     public void refererOnAnotherPortRejects() {
-        assertStatus(REJECTED, verifyReferer("https://intranet.example.com:8443/app", CLAIMED_ORIGIN));
+        assertRejected(REFERER_REJECTION, verifyReferer("https://intranet.example.com:8443/app", CLAIMED_ORIGIN));
     }
 
     @Test
     public void refererOnAnotherHostRejects() {
-        assertStatus(REJECTED, verifyReferer("https://other.example.com/app", CLAIMED_ORIGIN));
+        assertRejected(REFERER_REJECTION, verifyReferer("https://other.example.com/app", CLAIMED_ORIGIN));
     }
 
     @Test
     public void claimedDefaultPortMatchesARefererWithoutOne() {
-        assertStatus(VERIFIED, verifyReferer(CLAIMED_ORIGIN + "/app", "https://intranet.example.com:443"));
+        assertVerified(verifyReferer(CLAIMED_ORIGIN + "/app", "https://intranet.example.com:443"));
     }
 
     @Test
     public void refererClimbingOutOfTheClaimedPathWithAnEncodedSegmentRejects() {
-        assertStatus(REJECTED, verifyReferer(CLAIMED_ORIGIN + "/app/%2e%2e/admin", CLAIMED_ORIGIN + "/app"));
+        assertRejected(REFERER_REJECTION, verifyReferer(CLAIMED_ORIGIN + "/app/%2e%2e/admin", CLAIMED_ORIGIN + "/app"));
     }
 
     @Test
     public void refererClimbingOutOfTheClaimedPathWithAnEncodedSeparatorRejects() {
-        assertStatus(REJECTED, verifyReferer(CLAIMED_ORIGIN + "/app%2f..%2fadmin", CLAIMED_ORIGIN + "/app"));
+        assertRejected(REFERER_REJECTION, verifyReferer(CLAIMED_ORIGIN + "/app%2f..%2fadmin", CLAIMED_ORIGIN + "/app"));
     }
 
     @Test
     public void aTrailingSlashOnTheRefererPathIsIgnored() {
-        assertStatus(VERIFIED, verifyReferer(CLAIMED_ORIGIN + "/app/", CLAIMED_ORIGIN + "/app"));
+        assertVerified(verifyReferer(CLAIMED_ORIGIN + "/app/", CLAIMED_ORIGIN + "/app"));
     }
 
     @Test
     public void aTrailingSlashOnTheClaimedPathIsIgnored() {
-        assertStatus(VERIFIED, verifyReferer(CLAIMED_ORIGIN + "/app", CLAIMED_ORIGIN + "/app/"));
+        assertVerified(verifyReferer(CLAIMED_ORIGIN + "/app", CLAIMED_ORIGIN + "/app/"));
     }
 
     @Test
     public void claimedHttpDefaultPortMatchesARefererCarryingItExplicitly() {
-        assertStatus(VERIFIED, verifyReferer("http://intranet.example.com:80/app", "http://intranet.example.com"));
+        assertVerified(verifyReferer("http://intranet.example.com:80/app", "http://intranet.example.com"));
     }
 
     @Test
     public void refererCarryingAPipeInItsQueryVerifies() {
-        assertStatus(VERIFIED, verifyReferer(CLAIMED_ORIGIN + "/app?ids=1|2", CLAIMED_ORIGIN + "/app"));
+        assertVerified(verifyReferer(CLAIMED_ORIGIN + "/app?ids=1|2", CLAIMED_ORIGIN + "/app"));
     }
 
     @Test
     public void refererOnAHostCarryingAnUnderscoreVerifies() {
-        assertStatus(VERIFIED, verifyReferer("https://intra_net.example.com/app", "https://intra_net.example.com"));
+        assertVerified(verifyReferer("https://intra_net.example.com/app", "https://intra_net.example.com"));
     }
 
     @Test
     public void refererOnANonHttpSchemeRejects() {
-        assertStatus(REJECTED, verifyReferer("ftp://intranet.example.com/app", CLAIMED_ORIGIN));
+        assertRejected(REFERER_REJECTION, verifyReferer("ftp://intranet.example.com/app", CLAIMED_ORIGIN));
+    }
+
+    @Test
+    public void aPlusInThePathStandsForItself() {
+        assertVerified(verifyReferer(CLAIMED_ORIGIN + "/a+b/page", CLAIMED_ORIGIN + "/a+b"));
+    }
+
+    @Test
+    public void anEncodedSpaceInThePathIsNotAPlus() {
+        assertRejected(REFERER_REJECTION, verifyReferer(CLAIMED_ORIGIN + "/a%20b/page", CLAIMED_ORIGIN + "/a+b"));
     }
 
     @Test
     public void absentRefererWithARefererClaimRejects() {
-        assertStatus(REJECTED, verifyReferer(null, CLAIMED_ORIGIN));
+        assertRejected(REFERER_REJECTION, verifyReferer(null, CLAIMED_ORIGIN));
+    }
+
+    @Test
+    public void emptyRefererWithARefererClaimRejects() {
+        assertRejected(REFERER_REJECTION, verifyReferer("", CLAIMED_ORIGIN));
+    }
+
+    @Test
+    public void emptyRefererClaimVerifies() {
+        assertVerified(verify(token(Collections.<String>emptyList(), null)));
+    }
+
+    @Test
+    public void absentRefererClaimVerifiesWhateverTheRefererHeaderCarries() {
+        header("Referer", "https://other.example.com/app");
+        assertVerified(verify(token(null, null)));
     }
 
     @Test
     public void refererClaimListingSeveralOriginsVerifiesOnAMatch() {
         DecodedJWT token = token(Arrays.asList("https://other.example.com", CLAIMED_ORIGIN), null);
         header("Referer", CLAIMED_ORIGIN + "/app");
-        assertStatus(VERIFIED, verify(token));
+        assertVerified(verify(token));
+    }
+
+    // ---------- a referer claim its issuer wrote wrong ----------
+
+    @Test
+    public void aRefererClaimThatIsNotAnAbsoluteUrlSatisfiesNothing() {
+        assertRejected(REFERER_REJECTION, verifyReferer(CLAIMED_ORIGIN + "/app", "intranet.example.com"));
+    }
+
+    @Test
+    public void aRefererClaimThatIsAPathAloneSatisfiesNothing() {
+        assertRejected(REFERER_REJECTION, verifyReferer(CLAIMED_ORIGIN + "/app", "/app"));
+    }
+
+    @Test
+    public void aRefererClaimOnANonHttpSchemeSatisfiesNothing() {
+        assertRejected(REFERER_REJECTION, verifyReferer(CLAIMED_ORIGIN + "/app", "ftp://intranet.example.com"));
+    }
+
+    @Test
+    public void aRefererClaimAndARefererAgreeingOnANonHttpSchemeSatisfyNothing() {
+        // The scheme comparison alone would pass this pair, so only the http(s) guard refuses it.
+        assertRejected(REFERER_REJECTION,
+                verifyReferer("ftp://intranet.example.com/app/page", "ftp://intranet.example.com/app"));
+    }
+
+    @Test
+    public void aRefererClaimCarryingAQuerySatisfiesNothing() {
+        assertRejected(REFERER_REJECTION,
+                verifyReferer(CLAIMED_ORIGIN + "/app?tenant=a", CLAIMED_ORIGIN + "/app?tenant=a"));
+    }
+
+    @Test
+    public void anUnusableRefererClaimDoesNotStopAUsableOneFromMatching() {
+        DecodedJWT token = token(Arrays.asList("intranet.example.com", CLAIMED_ORIGIN), null);
+        header("Referer", CLAIMED_ORIGIN + "/app");
+        assertVerified(verify(token));
     }
 
     // ---------- both claims ----------
@@ -199,14 +267,14 @@ public class JWTFilterVerificationTest {
     public void bothClaimsSatisfiedVerifies() {
         DecodedJWT token = token(Collections.singletonList(CLAIMED_ORIGIN), Collections.singletonList(CONNECTION_ADDRESS));
         header("Referer", CLAIMED_ORIGIN + "/app");
-        assertStatus(VERIFIED, verify(token));
+        assertVerified(verify(token));
     }
 
     @Test
     public void refererSatisfiedWhileTheAddressClaimIsNotRejects() {
         DecodedJWT token = token(Collections.singletonList(CLAIMED_ORIGIN), Collections.singletonList(CLAIMED_ADDRESS));
         header("Referer", CLAIMED_ORIGIN + "/app");
-        assertStatus(REJECTED, verify(token));
+        assertRejected(ADDRESS_REJECTION, verify(token));
     }
 
     // ---------- helpers ----------
@@ -222,8 +290,18 @@ public class JWTFilterVerificationTest {
         return tvr;
     }
 
-    private static void assertStatus(TokenVerificationResult.VerificationStatus expected, TokenVerificationResult tvr) {
-        assertEquals(tvr.getMessage(), expected, tvr.getVerificationStatusCode());
+    private static void assertVerified(TokenVerificationResult tvr) {
+        assertEquals("status", VERIFIED, tvr.getVerificationStatusCode());
+        assertEquals("message", VERIFIED_MESSAGE, tvr.getMessage());
+        // The decoded token is what carries the scopes on to JWTConfig.tokenMatches, so a verified
+        // result without it grants nothing.
+        assertNotNull("the decoded token a verified result carries", tvr.getToken());
+    }
+
+    private static void assertRejected(String expectedMessage, TokenVerificationResult tvr) {
+        assertEquals("status", REJECTED, tvr.getVerificationStatusCode());
+        assertEquals("message", expectedMessage, tvr.getMessage());
+        assertNull("the decoded token a rejected result carries", tvr.getToken());
     }
 
     private static DecodedJWT token(List<String> claimReferers, List<String> ips) {

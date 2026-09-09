@@ -165,16 +165,25 @@ public class JWTFilter extends AbstractServletFilter {
             tvr.setVerificationStatusCode(TokenVerificationResult.VerificationStatus.VERIFIED);
             tvr.setMessage("Token verified");
         }
+        // The message this method sets is read by no component, so the decision reaches an operator
+        // here or nowhere. A request can repeat it, which is why it stays at debug.
+        logger.debug("JWT token verification: {}", tvr.getMessage());
     }
 
     private boolean checkReferer(List<String> claimReferers, String referer) {
         RefererParts actual = RefererParts.parse(referer);
         if (actual == null) {
+            logger.debug("Request referer is not an absolute http(s) URL: {}", referer);
             return false;
         }
         for (String claimReferer : claimReferers) {
             RefererParts claimed = RefererParts.parse(claimReferer);
-            if (claimed != null && claimed.covers(actual)) {
+            if (claimed == null || claimed.query != null) {
+                // Only the issuer of a token writes its claim, so an unusable entry is a
+                // configuration error that no request can provoke.
+                logger.warn("Ignoring a token referer claim that is not an absolute http(s) URL"
+                        + " without a query: {}", claimReferer);
+            } else if (claimed.covers(actual)) {
                 return true;
             }
         }
@@ -183,8 +192,8 @@ public class JWTFilter extends AbstractServletFilter {
 
     /**
      * The parts of an absolute http(s) URL that a token's {@code referer} claim is matched on.
-     * Parsing goes through {@link URL} and not {@link java.net.URI}, because a URI rejects characters a
-     * browser sends unencoded in a query and reports no host for an authority such as
+     * Parsing goes through {@link java.net.URL} and not {@link java.net.URI}, because a URI rejects
+     * characters a browser sends unencoded in a query and reports no host for an authority such as
      * {@code intra_net.example.com}.
      */
     private static final class RefererParts {
@@ -194,12 +203,15 @@ public class JWTFilter extends AbstractServletFilter {
         private final int port;
         /** Percent-decoded, with {@code .} and {@code ..} segments resolved. Empty for the root. */
         private final String path;
+        /** Null when the URL carries no query. A claim carrying one is refused. */
+        private final String query;
 
-        private RefererParts(String scheme, String host, int port, String path) {
+        private RefererParts(String scheme, String host, int port, String path, String query) {
             this.scheme = scheme;
             this.host = host;
             this.port = port;
             this.path = path;
+            this.query = query;
         }
 
         static RefererParts parse(String value) {
@@ -210,25 +222,21 @@ public class JWTFilter extends AbstractServletFilter {
             try {
                 url = new URL(value);
             } catch (MalformedURLException e) {
-                logger.debug("Referer value is not an absolute URL: {}", value);
                 return null;
             }
             String scheme = url.getProtocol();
             if (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme)) {
-                logger.debug("Referer value carries no http(s) scheme: {}", value);
                 return null;
             }
             if (StringUtils.isEmpty(url.getHost())) {
-                logger.debug("Referer value carries no host: {}", value);
                 return null;
             }
             String path = resolvePath(url.getPath());
             if (path == null) {
-                logger.debug("Referer path cannot be decoded: {}", value);
                 return null;
             }
             int port = url.getPort() != -1 ? url.getPort() : url.getDefaultPort();
-            return new RefererParts(scheme, url.getHost(), port, path);
+            return new RefererParts(scheme, url.getHost(), port, path, url.getQuery());
         }
 
         /**
