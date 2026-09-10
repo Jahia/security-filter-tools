@@ -128,9 +128,13 @@ public class JWTFilter extends AbstractServletFilter {
                     verifyToken(httpRequest, tvr, decodedToken);
 
                     if (tvr.getVerificationStatusCode() == TokenVerificationResult.VerificationStatus.VERIFIED) {
-                        List<String> scopes = decodedToken.getClaim("scopes").asList(String.class);
-                        if (scopes != null) {
-                            permissionService.addScopes(scopes, httpRequest);
+                        ListClaim scopes = ListClaim.of(decodedToken, "scopes");
+                        if (scopes.isUnreadable()) {
+                            tvr.setToken(null);
+                            tvr.setVerificationStatusCode(TokenVerificationResult.VerificationStatus.REJECTED);
+                            tvr.setMessage("Unreadable scopes in token");
+                        } else if (scopes.values() != null) {
+                            permissionService.addScopes(scopes.values(), httpRequest);
                         }
                     }
                 } catch (Exception e) {
@@ -148,15 +152,22 @@ public class JWTFilter extends AbstractServletFilter {
 
     void verifyToken(HttpServletRequest httpRequest, TokenVerificationResult tvr, DecodedJWT decodedToken) {
         String referer = httpRequest.getHeader("referer");
-        List<String> claimReferers = decodedToken.getClaim("referer").asList(String.class);
+        ListClaim claimReferers = ListClaim.of(decodedToken, "referer");
         String ip = httpRequest.getRemoteAddr();
-        List<String> ips = decodedToken.getClaim("ips").asList(String.class);
+        ListClaim ips = ListClaim.of(decodedToken, "ips");
 
-        if (claimReferers != null && !claimReferers.isEmpty() && !checkReferer(claimReferers, referer)) {
+        if (claimReferers.isUnreadable()) {
+            // The issuer wrote a restriction this code cannot read, so honour it as a refusal.
+            tvr.setVerificationStatusCode(TokenVerificationResult.VerificationStatus.REJECTED);
+            tvr.setMessage("Unreadable referer in token");
+        } else if (ips.isUnreadable()) {
+            tvr.setVerificationStatusCode(TokenVerificationResult.VerificationStatus.REJECTED);
+            tvr.setMessage("Unreadable IPs in token");
+        } else if (claimReferers.isConstraining() && !checkReferer(claimReferers.values(), referer)) {
             //Check referers
             tvr.setVerificationStatusCode(TokenVerificationResult.VerificationStatus.REJECTED);
             tvr.setMessage("Incorrect referer in token");
-        } else if (ips != null && !ips.isEmpty() && !ips.contains(ip)) {
+        } else if (ips.isConstraining() && !ips.values().contains(ip)) {
             //Check IP
             tvr.setVerificationStatusCode(TokenVerificationResult.VerificationStatus.REJECTED);
             tvr.setMessage("Your IP did not match any of the permitted IPs");

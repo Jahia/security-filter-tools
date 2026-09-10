@@ -34,6 +34,8 @@ public class JWTFilterVerificationTest {
     private static final String VERIFIED_MESSAGE = "Token verified";
     private static final String REFERER_REJECTION = "Incorrect referer in token";
     private static final String ADDRESS_REJECTION = "Your IP did not match any of the permitted IPs";
+    private static final String SCALAR_REFERER_REJECTION = "Unreadable referer in token";
+    private static final String SCALAR_ADDRESS_REJECTION = "Unreadable IPs in token";
 
     private final Map<String, String> headers = new HashMap<>();
 
@@ -261,6 +263,38 @@ public class JWTFilterVerificationTest {
         assertVerified(verify(token));
     }
 
+    // ---------- a claim the issuer wrote as a scalar ----------
+
+    @Test
+    public void aScalarAddressClaimRejects() {
+        assertRejected(SCALAR_ADDRESS_REJECTION, verify(tokenWithClaims(claim(null), scalarClaim())));
+    }
+
+    @Test
+    public void aScalarRefererClaimRejects() {
+        header("Referer", CLAIMED_ORIGIN + "/app");
+        assertRejected(SCALAR_REFERER_REJECTION, verify(tokenWithClaims(scalarClaim(), claim(null))));
+    }
+
+    @Test
+    public void aScalarAddressClaimRejectsEvenFromTheConnectionAddress() {
+        // The connection address cannot satisfy a claim that is never read, so the arm that would
+        // pass on the array form must still refuse here.
+        assertRejected(SCALAR_ADDRESS_REJECTION, verify(tokenWithClaims(claim(null), scalarClaim())));
+    }
+
+    @Test
+    public void aScalarRefererClaimIsReportedBeforeAScalarAddressClaim() {
+        assertRejected(SCALAR_REFERER_REJECTION, verify(tokenWithClaims(scalarClaim(), scalarClaim())));
+    }
+
+    @Test
+    public void aScalarAddressClaimRejectsWhileTheRefererClaimIsSatisfied() {
+        header("Referer", CLAIMED_ORIGIN + "/app");
+        assertRejected(SCALAR_ADDRESS_REJECTION,
+                verify(tokenWithClaims(claim(Collections.singletonList(CLAIMED_ORIGIN)), scalarClaim())));
+    }
+
     // ---------- both claims ----------
 
     @Test
@@ -305,17 +339,35 @@ public class JWTFilterVerificationTest {
     }
 
     private static DecodedJWT token(List<String> claimReferers, List<String> ips) {
-        Claim refererClaim = claim(claimReferers);
-        Claim ipsClaim = claim(ips);
+        return tokenWithClaims(claim(claimReferers), claim(ips));
+    }
+
+    private static DecodedJWT tokenWithClaims(Claim refererClaim, Claim ipsClaim) {
+        Claim scopesClaim = claim(Collections.singletonList("graphql"));
         DecodedJWT decodedToken = mock(DecodedJWT.class);
         when(decodedToken.getClaim("referer")).thenReturn(refererClaim);
         when(decodedToken.getClaim("ips")).thenReturn(ipsClaim);
+        when(decodedToken.getClaim("scopes")).thenReturn(scopesClaim);
         return decodedToken;
     }
 
+    /** A claim carrying a list, or an absent claim when {@code values} is null. */
     private static Claim claim(List<String> values) {
         Claim claim = mock(Claim.class);
         when(claim.asList(String.class)).thenReturn(values);
+        // java-jwt answers a NullClaim for an absent claim, and isNull() is true only there.
+        when(claim.isNull()).thenReturn(values == null);
+        return claim;
+    }
+
+    /**
+     * A claim the issuer wrote as a scalar. java-jwt reports it exactly as it reports an absent
+     * claim through {@code asList}, and {@code isNull()} is what separates the two.
+     */
+    private static Claim scalarClaim() {
+        Claim claim = mock(Claim.class);
+        when(claim.asList(String.class)).thenReturn(null);
+        when(claim.isNull()).thenReturn(false);
         return claim;
     }
 }
