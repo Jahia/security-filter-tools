@@ -241,10 +241,12 @@ public class JWTConfig implements JWTService, ManagedService {
 
         //Token contains required scope, allow access
         if (verificationResult.getToken() != null) {
-            List<String> tokenScopes = verificationResult.getToken().getClaim("scopes").asList(String.class);
-            for (String scope : scopes) {
-                if (tokenScopes.contains(scope)) {
-                    return true;
+            ListClaim tokenScopes = ListClaim.of(verificationResult.getToken(), "scopes");
+            if (tokenScopes.isConstraining()) {
+                for (String scope : scopes) {
+                    if (tokenScopes.values().contains(scope)) {
+                        return true;
+                    }
                 }
             }
         }
