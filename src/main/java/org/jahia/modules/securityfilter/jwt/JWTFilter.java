@@ -133,7 +133,8 @@ public class JWTFilter extends AbstractServletFilter {
                             tvr.setToken(null);
                             tvr.setVerificationStatusCode(TokenVerificationResult.VerificationStatus.REJECTED);
                             tvr.setMessage("Unreadable scopes in token");
-                        } else if (scopes.values() != null) {
+                            logger.debug("JWT token verification: {}", tvr.getMessage());
+                        } else if (scopes.isConstraining()) {
                             permissionService.addScopes(scopes.values(), httpRequest);
                         }
                     }

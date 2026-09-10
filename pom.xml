@@ -150,10 +150,10 @@
                 <configuration>
                     <instructions>
                         <Import-Package>
-                            com.auth0.jwt;resolution:=optional,
-                            com.auth0.jwt.interfaces;resolution:=optional,
-                            com.auth0.jwt.exceptions;resolution:=optional,
-                            com.auth0.jwt.algorithms;resolution:=optional,
+                            com.auth0.jwt;version="[3.4,4)";resolution:=optional,
+                            com.auth0.jwt.interfaces;version="[3.4,4)";resolution:=optional,
+                            com.auth0.jwt.exceptions;version="[3.4,4)";resolution:=optional,
+                            com.auth0.jwt.algorithms;version="[3.4,4)";resolution:=optional,
                             ${jahia.plugin.projectPackageImport},
                             *
                         </Import-Package>

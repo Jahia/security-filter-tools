@@ -267,32 +267,53 @@ public class JWTFilterVerificationTest {
 
     @Test
     public void aScalarAddressClaimRejects() {
-        assertRejected(SCALAR_ADDRESS_REJECTION, verify(tokenWithClaims(claim(null), scalarClaim())));
+        assertRejected(SCALAR_ADDRESS_REJECTION, verify(tokenWithClaims(claim(null), scalarClaim(CLAIMED_ADDRESS))));
     }
 
     @Test
     public void aScalarRefererClaimRejects() {
         header("Referer", CLAIMED_ORIGIN + "/app");
-        assertRejected(SCALAR_REFERER_REJECTION, verify(tokenWithClaims(scalarClaim(), claim(null))));
+        assertRejected(SCALAR_REFERER_REJECTION, verify(tokenWithClaims(scalarClaim(CLAIMED_ORIGIN), claim(null))));
     }
 
     @Test
-    public void aScalarAddressClaimRejectsEvenFromTheConnectionAddress() {
-        // The connection address cannot satisfy a claim that is never read, so the arm that would
-        // pass on the array form must still refuse here.
-        assertRejected(SCALAR_ADDRESS_REJECTION, verify(tokenWithClaims(claim(null), scalarClaim())));
+    public void aScalarAddressClaimHoldingTheConnectionAddressStillRejects() {
+        // The array form of this exact value verifies, so this row is what shows the refusal comes
+        // from the claim's shape and not from its value.
+        assertRejected(SCALAR_ADDRESS_REJECTION,
+                verify(tokenWithClaims(claim(null), scalarClaim(CONNECTION_ADDRESS))));
+    }
+
+    @Test
+    public void anAddressClaimHoldingANullEntryRejects() {
+        assertRejected(SCALAR_ADDRESS_REJECTION,
+                verify(tokenWithClaims(claim(null), claim(Arrays.asList(CONNECTION_ADDRESS, null)))));
+    }
+
+    @Test
+    public void aRefererClaimHoldingANullEntryRejects() {
+        header("Referer", CLAIMED_ORIGIN + "/app");
+        assertRejected(SCALAR_REFERER_REJECTION,
+                verify(tokenWithClaims(claim(Arrays.asList(CLAIMED_ORIGIN, null)), claim(null))));
+    }
+
+    @Test
+    public void anAddressClaimWrittenAsJsonNullConstrainsNothing() {
+        // java-jwt maps an absent claim and a JSON-null claim onto one NullClaim, so this code
+        // cannot separate them and treats both as no list given.
+        assertVerified(verify(tokenWithClaims(claim(null), claim(null))));
     }
 
     @Test
     public void aScalarRefererClaimIsReportedBeforeAScalarAddressClaim() {
-        assertRejected(SCALAR_REFERER_REJECTION, verify(tokenWithClaims(scalarClaim(), scalarClaim())));
+        assertRejected(SCALAR_REFERER_REJECTION, verify(tokenWithClaims(scalarClaim(CLAIMED_ORIGIN), scalarClaim(CLAIMED_ADDRESS))));
     }
 
     @Test
     public void aScalarAddressClaimRejectsWhileTheRefererClaimIsSatisfied() {
         header("Referer", CLAIMED_ORIGIN + "/app");
         assertRejected(SCALAR_ADDRESS_REJECTION,
-                verify(tokenWithClaims(claim(Collections.singletonList(CLAIMED_ORIGIN)), scalarClaim())));
+                verify(tokenWithClaims(claim(Collections.singletonList(CLAIMED_ORIGIN)), scalarClaim(CLAIMED_ADDRESS))));
     }
 
     // ---------- both claims ----------
@@ -343,11 +364,10 @@ public class JWTFilterVerificationTest {
     }
 
     private static DecodedJWT tokenWithClaims(Claim refererClaim, Claim ipsClaim) {
-        Claim scopesClaim = claim(Collections.singletonList("graphql"));
+        // verifyToken reads these two claims and no other, so this class stubs no scopes claim.
         DecodedJWT decodedToken = mock(DecodedJWT.class);
         when(decodedToken.getClaim("referer")).thenReturn(refererClaim);
         when(decodedToken.getClaim("ips")).thenReturn(ipsClaim);
-        when(decodedToken.getClaim("scopes")).thenReturn(scopesClaim);
         return decodedToken;
     }
 
@@ -355,7 +375,8 @@ public class JWTFilterVerificationTest {
     private static Claim claim(List<String> values) {
         Claim claim = mock(Claim.class);
         when(claim.asList(String.class)).thenReturn(values);
-        // java-jwt answers a NullClaim for an absent claim, and isNull() is true only there.
+        // java-jwt answers one NullClaim for a claim that is absent or written as JSON null,
+        // and isNull() is true for exactly those two.
         when(claim.isNull()).thenReturn(values == null);
         return claim;
     }
@@ -364,9 +385,10 @@ public class JWTFilterVerificationTest {
      * A claim the issuer wrote as a scalar. java-jwt reports it exactly as it reports an absent
      * claim through {@code asList}, and {@code isNull()} is what separates the two.
      */
-    private static Claim scalarClaim() {
+    private static Claim scalarClaim(String value) {
         Claim claim = mock(Claim.class);
         when(claim.asList(String.class)).thenReturn(null);
+        when(claim.asString()).thenReturn(value);
         when(claim.isNull()).thenReturn(false);
         return claim;
     }
