@@ -301,13 +301,13 @@ public class JWTFilterVerificationTest {
     public void anAddressClaimWrittenAsJsonNullConstrainsNothing() {
         // The payload carries the name, so the key set alone would call this claim given. isNull()
         // is what keeps a JSON-null claim reading as no list given, exactly like an absent one.
-        assertVerified(verify(tokenWithClaims(claim(null), jsonNullClaim())));
+        assertVerified(verify(tokenWithClaims(claim(null), nullClaim())));
     }
 
     @Test
     public void aRefererClaimWrittenAsJsonNullConstrainsNothing() {
         header("Referer", "https://elsewhere.example.com/app");
-        assertVerified(verify(tokenWithClaims(jsonNullClaim(), claim(null))));
+        assertVerified(verify(tokenWithClaims(nullClaim(), claim(null))));
     }
 
     @Test
@@ -394,7 +394,7 @@ public class JWTFilterVerificationTest {
         // java-jwt answers a NullClaim, and never a Java null, for a name the payload does not
         // carry, so an absent claim is a claim object that getClaims() does not list.
         when(decodedToken.getClaim(anyString()))
-                .thenAnswer(call -> payload.getOrDefault(call.getArgument(0), absentClaim()));
+                .thenAnswer(call -> payload.getOrDefault(call.getArgument(0), nullClaim()));
         return decodedToken;
     }
 
@@ -410,21 +410,12 @@ public class JWTFilterVerificationTest {
     }
 
     /**
-     * The claim java-jwt answers for a name the payload does not carry. On 3.4.0 that is a
-     * NullClaim, whose {@code isNull()} is true and whose {@code asList} answers null.
+     * The claim java-jwt answers for a name the payload does not carry, and for a name it carries
+     * as JSON {@code null}. On 3.4.0 both are one NullClaim, whose {@code isNull()} is true and
+     * whose {@code asList} answers null, so one double serves both cases. What separates them is
+     * the payload's key set, and {@link #tokenWithClaims} is what puts a name in it.
      */
-    private static Claim absentClaim() {
-        Claim claim = mock(Claim.class);
-        when(claim.asList(String.class)).thenReturn(null);
-        when(claim.isNull()).thenReturn(true);
-        return claim;
-    }
-
-    /**
-     * A claim the issuer wrote as JSON {@code null}. The payload carries the name, and java-jwt
-     * answers a claim whose {@code isNull()} is true, exactly as for an absent claim.
-     */
-    private static Claim jsonNullClaim() {
+    private static Claim nullClaim() {
         Claim claim = mock(Claim.class);
         when(claim.asList(String.class)).thenReturn(null);
         when(claim.isNull()).thenReturn(true);
