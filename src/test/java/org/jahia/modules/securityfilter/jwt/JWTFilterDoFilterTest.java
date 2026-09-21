@@ -12,7 +12,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.jahia.modules.securityfilter.jwt.TokenVerificationResult.VerificationStatus.REJECTED;
 import static org.jahia.modules.securityfilter.jwt.TokenVerificationResult.VerificationStatus.VERIFIED;
@@ -45,6 +47,7 @@ public class JWTFilterDoFilterTest {
     private FilterChain chain;
     private PermissionService permissionService;
     private DecodedJWT decodedToken;
+    private Map<String, Claim> payload;
 
     @Before
     public void setUp() throws Exception {
@@ -63,11 +66,13 @@ public class JWTFilterDoFilterTest {
         when(request.getRemoteAddr()).thenReturn(CONNECTION_ADDRESS);
         when(jwtService.verifyToken(anyString())).thenReturn(decodedToken);
 
-        // No referer and no ips restriction, so the scopes claim is the only variable.
-        Claim noReferer = absentClaim();
-        Claim noIps = absentClaim();
-        when(decodedToken.getClaim("referer")).thenReturn(noReferer);
-        when(decodedToken.getClaim("ips")).thenReturn(noIps);
+        // The payload starts empty, so referer and ips are absent and the scopes claim is the
+        // only variable. java-jwt answers a NullClaim, and never a Java null, for a name the
+        // payload does not carry.
+        payload = new HashMap<>();
+        when(decodedToken.getClaims()).thenReturn(payload);
+        when(decodedToken.getClaim(anyString()))
+                .thenAnswer(call -> payload.getOrDefault(call.getArgument(0), absentClaim()));
     }
 
     @Test
@@ -115,7 +120,7 @@ public class JWTFilterDoFilterTest {
     @Test
     public void aRefusedAddressRestrictionGrantsNothingWhateverTheScopesClaimHolds() throws Exception {
         Claim restricted = listClaim(Collections.singletonList(OTHER_ADDRESS));
-        when(decodedToken.getClaim("ips")).thenReturn(restricted);
+        payload.put("ips", restricted);
         stubScopes(listClaim(Collections.singletonList("graphql")));
         TokenVerificationResult tvr = runFilter();
         assertEquals("status", REJECTED, tvr.getVerificationStatusCode());
@@ -130,7 +135,7 @@ public class JWTFilterDoFilterTest {
     }
 
     private void stubScopes(Claim scopes) {
-        when(decodedToken.getClaim("scopes")).thenReturn(scopes);
+        payload.put("scopes", scopes);
     }
 
     /**

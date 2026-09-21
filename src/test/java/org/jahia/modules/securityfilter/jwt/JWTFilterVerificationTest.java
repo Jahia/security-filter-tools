@@ -299,8 +299,21 @@ public class JWTFilterVerificationTest {
 
     @Test
     public void anAddressClaimWrittenAsJsonNullConstrainsNothing() {
-        // java-jwt maps an absent claim and a JSON-null claim onto one NullClaim, so this code
-        // cannot separate them and treats both as no list given.
+        // The payload carries the name, so the key set alone would call this claim given. isNull()
+        // is what keeps a JSON-null claim reading as no list given, exactly like an absent one.
+        assertVerified(verify(tokenWithClaims(claim(null), jsonNullClaim())));
+    }
+
+    @Test
+    public void aRefererClaimWrittenAsJsonNullConstrainsNothing() {
+        header("Referer", "https://elsewhere.example.com/app");
+        assertVerified(verify(tokenWithClaims(jsonNullClaim(), claim(null))));
+    }
+
+    @Test
+    public void bothClaimsAbsentFromThePayloadConstrainNothing() {
+        // The companion of the two rows above: absence is read from the payload's key set, and a
+        // claim java-jwt answers for a name the payload never carried constrains nothing.
         assertVerified(verify(tokenWithClaims(claim(null), claim(null))));
     }
 
@@ -363,27 +376,64 @@ public class JWTFilterVerificationTest {
         return tokenWithClaims(claim(claimReferers), claim(ips));
     }
 
+    /**
+     * A token whose payload carries exactly the claims given, where a {@code null} argument is a
+     * claim the payload does not carry. {@code verifyToken} reads {@code referer} and {@code ips}
+     * and no other claim, so this class stubs no scopes claim.
+     */
     private static DecodedJWT tokenWithClaims(Claim refererClaim, Claim ipsClaim) {
-        // verifyToken reads these two claims and no other, so this class stubs no scopes claim.
+        Map<String, Claim> payload = new HashMap<>();
+        if (refererClaim != null) {
+            payload.put("referer", refererClaim);
+        }
+        if (ipsClaim != null) {
+            payload.put("ips", ipsClaim);
+        }
         DecodedJWT decodedToken = mock(DecodedJWT.class);
-        when(decodedToken.getClaim("referer")).thenReturn(refererClaim);
-        when(decodedToken.getClaim("ips")).thenReturn(ipsClaim);
+        when(decodedToken.getClaims()).thenReturn(payload);
+        // java-jwt answers a NullClaim, and never a Java null, for a name the payload does not
+        // carry, so an absent claim is a claim object that getClaims() does not list.
+        when(decodedToken.getClaim(anyString()))
+                .thenAnswer(call -> payload.getOrDefault(call.getArgument(0), absentClaim()));
         return decodedToken;
     }
 
     /** A claim carrying a list, or an absent claim when {@code values} is null. */
     private static Claim claim(List<String> values) {
+        if (values == null) {
+            return null;
+        }
         Claim claim = mock(Claim.class);
         when(claim.asList(String.class)).thenReturn(values);
-        // java-jwt answers one NullClaim for a claim that is absent or written as JSON null,
-        // and isNull() is true for exactly those two.
-        when(claim.isNull()).thenReturn(values == null);
+        when(claim.isNull()).thenReturn(false);
+        return claim;
+    }
+
+    /**
+     * The claim java-jwt answers for a name the payload does not carry. On 3.4.0 that is a
+     * NullClaim, whose {@code isNull()} is true and whose {@code asList} answers null.
+     */
+    private static Claim absentClaim() {
+        Claim claim = mock(Claim.class);
+        when(claim.asList(String.class)).thenReturn(null);
+        when(claim.isNull()).thenReturn(true);
+        return claim;
+    }
+
+    /**
+     * A claim the issuer wrote as JSON {@code null}. The payload carries the name, and java-jwt
+     * answers a claim whose {@code isNull()} is true, exactly as for an absent claim.
+     */
+    private static Claim jsonNullClaim() {
+        Claim claim = mock(Claim.class);
+        when(claim.asList(String.class)).thenReturn(null);
+        when(claim.isNull()).thenReturn(true);
         return claim;
     }
 
     /**
      * A claim the issuer wrote as a scalar. java-jwt reports it exactly as it reports an absent
-     * claim through {@code asList}, and {@code isNull()} is what separates the two.
+     * claim through {@code asList}, and the payload's key set is what separates the two.
      */
     private static Claim scalarClaim(String value) {
         Claim claim = mock(Claim.class);

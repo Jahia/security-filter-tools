@@ -12,8 +12,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
@@ -41,6 +43,7 @@ public class JWTConfigTokenMatchesTest {
     private HttpServletResponse response;
     private FilterChain chain;
     private DecodedJWT decodedToken;
+    private Map<String, Claim> payload;
 
     @Before
     public void setUp() throws Exception {
@@ -58,10 +61,13 @@ public class JWTConfigTokenMatchesTest {
         when(request.getRemoteAddr()).thenReturn("198.51.100.9");
         when(jwtService.verifyToken(anyString())).thenReturn(decodedToken);
 
-        Claim noReferer = absentClaim();
-        Claim noIps = absentClaim();
-        when(decodedToken.getClaim("referer")).thenReturn(noReferer);
-        when(decodedToken.getClaim("ips")).thenReturn(noIps);
+        // The payload starts empty, so referer and ips are absent and the scopes claim is the
+        // only variable. java-jwt answers a NullClaim, and never a Java null, for a name the
+        // payload does not carry.
+        payload = new HashMap<>();
+        when(decodedToken.getClaims()).thenReturn(payload);
+        when(decodedToken.getClaim(anyString()))
+                .thenAnswer(call -> payload.getOrDefault(call.getArgument(0), absentClaim()));
     }
 
     @Test
@@ -105,7 +111,7 @@ public class JWTConfigTokenMatchesTest {
 
     /** Runs the filter with this scopes claim, and asks tokenMatches from inside the chain. */
     private Boolean askWith(Claim scopesClaim, final Set<String> requiredScopes) throws Exception {
-        when(decodedToken.getClaim("scopes")).thenReturn(scopesClaim);
+        payload.put("scopes", scopesClaim);
         final Boolean[] answer = new Boolean[1];
         doAnswer(invocation -> {
             answer[0] = config.tokenMatches(requiredScopes);
