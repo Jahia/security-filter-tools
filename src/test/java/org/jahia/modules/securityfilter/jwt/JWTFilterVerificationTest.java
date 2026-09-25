@@ -34,6 +34,8 @@ public class JWTFilterVerificationTest {
     private static final String VERIFIED_MESSAGE = "Token verified";
     private static final String REFERER_REJECTION = "Incorrect referer in token";
     private static final String ADDRESS_REJECTION = "Your IP did not match any of the permitted IPs";
+    private static final String SCALAR_REFERER_REJECTION = "Unreadable referer in token";
+    private static final String SCALAR_ADDRESS_REJECTION = "Unreadable IPs in token";
 
     private final Map<String, String> headers = new HashMap<>();
 
@@ -261,6 +263,72 @@ public class JWTFilterVerificationTest {
         assertVerified(verify(token));
     }
 
+    // ---------- a claim the issuer wrote as a scalar ----------
+
+    @Test
+    public void aScalarAddressClaimRejects() {
+        assertRejected(SCALAR_ADDRESS_REJECTION, verify(tokenWithClaims(claim(null), scalarClaim(CLAIMED_ADDRESS))));
+    }
+
+    @Test
+    public void aScalarRefererClaimRejects() {
+        header("Referer", CLAIMED_ORIGIN + "/app");
+        assertRejected(SCALAR_REFERER_REJECTION, verify(tokenWithClaims(scalarClaim(CLAIMED_ORIGIN), claim(null))));
+    }
+
+    @Test
+    public void aScalarAddressClaimHoldingTheConnectionAddressStillRejects() {
+        // The array form of this exact value verifies, so this row is what shows the refusal comes
+        // from the claim's shape and not from its value.
+        assertRejected(SCALAR_ADDRESS_REJECTION,
+                verify(tokenWithClaims(claim(null), scalarClaim(CONNECTION_ADDRESS))));
+    }
+
+    @Test
+    public void anAddressClaimHoldingANullEntryRejects() {
+        assertRejected(SCALAR_ADDRESS_REJECTION,
+                verify(tokenWithClaims(claim(null), claim(Arrays.asList(CONNECTION_ADDRESS, null)))));
+    }
+
+    @Test
+    public void aRefererClaimHoldingANullEntryRejects() {
+        header("Referer", CLAIMED_ORIGIN + "/app");
+        assertRejected(SCALAR_REFERER_REJECTION,
+                verify(tokenWithClaims(claim(Arrays.asList(CLAIMED_ORIGIN, null)), claim(null))));
+    }
+
+    @Test
+    public void anAddressClaimWrittenAsJsonNullConstrainsNothing() {
+        // The payload carries the name, so the key set alone would call this claim given. isNull()
+        // is what keeps a JSON-null claim reading as no list given, exactly like an absent one.
+        assertVerified(verify(tokenWithClaims(claim(null), nullClaim())));
+    }
+
+    @Test
+    public void aRefererClaimWrittenAsJsonNullConstrainsNothing() {
+        header("Referer", "https://elsewhere.example.com/app");
+        assertVerified(verify(tokenWithClaims(nullClaim(), claim(null))));
+    }
+
+    @Test
+    public void bothClaimsAbsentFromThePayloadConstrainNothing() {
+        // The companion of the two rows above: absence is read from the payload's key set, and a
+        // claim java-jwt answers for a name the payload never carried constrains nothing.
+        assertVerified(verify(tokenWithClaims(claim(null), claim(null))));
+    }
+
+    @Test
+    public void aScalarRefererClaimIsReportedBeforeAScalarAddressClaim() {
+        assertRejected(SCALAR_REFERER_REJECTION, verify(tokenWithClaims(scalarClaim(CLAIMED_ORIGIN), scalarClaim(CLAIMED_ADDRESS))));
+    }
+
+    @Test
+    public void aScalarAddressClaimRejectsWhileTheRefererClaimIsSatisfied() {
+        header("Referer", CLAIMED_ORIGIN + "/app");
+        assertRejected(SCALAR_ADDRESS_REJECTION,
+                verify(tokenWithClaims(claim(Collections.singletonList(CLAIMED_ORIGIN)), scalarClaim(CLAIMED_ADDRESS))));
+    }
+
     // ---------- both claims ----------
 
     @Test
@@ -305,17 +373,64 @@ public class JWTFilterVerificationTest {
     }
 
     private static DecodedJWT token(List<String> claimReferers, List<String> ips) {
-        Claim refererClaim = claim(claimReferers);
-        Claim ipsClaim = claim(ips);
+        return tokenWithClaims(claim(claimReferers), claim(ips));
+    }
+
+    /**
+     * A token whose payload carries exactly the claims given, where a {@code null} argument is a
+     * claim the payload does not carry. {@code verifyToken} reads {@code referer} and {@code ips}
+     * and no other claim, so this class stubs no scopes claim.
+     */
+    private static DecodedJWT tokenWithClaims(Claim refererClaim, Claim ipsClaim) {
+        Map<String, Claim> payload = new HashMap<>();
+        if (refererClaim != null) {
+            payload.put("referer", refererClaim);
+        }
+        if (ipsClaim != null) {
+            payload.put("ips", ipsClaim);
+        }
         DecodedJWT decodedToken = mock(DecodedJWT.class);
-        when(decodedToken.getClaim("referer")).thenReturn(refererClaim);
-        when(decodedToken.getClaim("ips")).thenReturn(ipsClaim);
+        when(decodedToken.getClaims()).thenReturn(payload);
+        // java-jwt answers a NullClaim, and never a Java null, for a name the payload does not
+        // carry, so an absent claim is a claim object that getClaims() does not list.
+        when(decodedToken.getClaim(anyString()))
+                .thenAnswer(call -> payload.getOrDefault(call.getArgument(0), nullClaim()));
         return decodedToken;
     }
 
+    /** A claim carrying a list, or an absent claim when {@code values} is null. */
     private static Claim claim(List<String> values) {
+        if (values == null) {
+            return null;
+        }
         Claim claim = mock(Claim.class);
         when(claim.asList(String.class)).thenReturn(values);
+        when(claim.isNull()).thenReturn(false);
+        return claim;
+    }
+
+    /**
+     * The claim java-jwt answers for a name the payload does not carry, and for a name it carries
+     * as JSON {@code null}. On 3.4.0 both are one NullClaim, whose {@code isNull()} is true and
+     * whose {@code asList} answers null, so one double serves both cases. What separates them is
+     * the payload's key set, and {@link #tokenWithClaims} is what puts a name in it.
+     */
+    private static Claim nullClaim() {
+        Claim claim = mock(Claim.class);
+        when(claim.asList(String.class)).thenReturn(null);
+        when(claim.isNull()).thenReturn(true);
+        return claim;
+    }
+
+    /**
+     * A claim the issuer wrote as a scalar. java-jwt reports it exactly as it reports an absent
+     * claim through {@code asList}, and the payload's key set is what separates the two.
+     */
+    private static Claim scalarClaim(String value) {
+        Claim claim = mock(Claim.class);
+        when(claim.asList(String.class)).thenReturn(null);
+        when(claim.asString()).thenReturn(value);
+        when(claim.isNull()).thenReturn(false);
         return claim;
     }
 }
