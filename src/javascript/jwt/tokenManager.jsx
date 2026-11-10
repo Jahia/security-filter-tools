@@ -72,6 +72,7 @@ class TokenManager extends React.Component {
                     <Button variant="ghost"
                             size="big"
                             icon={<Add/>}
+                            aria-label="Add token"
                             onClick={() => this.setState({showEditCreateDialog: true})}/>
                 </Tooltip>
             </div>
@@ -79,7 +80,7 @@ class TokenManager extends React.Component {
     }
 
     editButton() {
-        return <Button variant="ghost" size="big" icon={<Edit/>} onClick={() => this.toggleDialog()}/>;
+        return <Button variant="ghost" size="big" icon={<Edit/>} aria-label="Edit token" onClick={() => this.toggleDialog()}/>;
     }
 
     toggleDialog() {
