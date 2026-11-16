@@ -54,7 +54,7 @@
     </parent>
 
     <artifactId>security-filter-tools</artifactId>
-    <version>2.7.0-SNAPSHOT</version>
+    <version>3.0.0-SNAPSHOT</version>
     <packaging>bundle</packaging>
     <name>Jahia API security config and filter tools</name>
     <description>Jahia API security config and filter tools</description>
@@ -69,7 +69,7 @@
     <properties>
         <jahia-module-type>system</jahia-module-type>
         <jahia-depends>graphql-dxm-provider</jahia-depends>
-        <jahia-module-signature>MCwCFHmurW+1M/uLAl7jBYkm6t/ZeD61AhRUko1r5Thakj8ELbcEC4WmjZqFog==</jahia-module-signature>
+        <jahia-module-signature>MCwCFB75PaCYLMpLvwhWnlTRJyoQRZuJAhQIu0GwHKuXGJNBlbydgQLcxQYlLw==</jahia-module-signature>
         <jahia.plugin.version>6.14.0</jahia.plugin.version>
         <import-package>
             com.fasterxml.jackson.core;version="[2.10,3)",
